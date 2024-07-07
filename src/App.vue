@@ -1,21 +1,38 @@
 <template>
   <nav>
-    <router-link
+    <!-- <router-link
       class="router-name"
       v-for="{ name, path } in routes"
       :key="path"
       :to="path"
     >
       {{ name }}
-    </router-link>
+    </router-link> -->
+    <select v-model="activeRoute">
+      <option v-for="{ name, path } in routes" :value="path" :key="path">
+        {{ name }}
+      </option>
+    </select>
   </nav>
   <router-view />
 </template>
 
 <script lang="ts" setup>
 import { useRouter } from "vue-router";
-import { onMounted } from "vue";
+import { onMounted, ref, watch } from "vue";
+const router = useRouter();
 const routes = useRouter().getRoutes();
+const activeRoute = ref("");
+
+watch(
+  activeRoute,
+  (value) => {
+    router.push({ path: value });
+  },
+  {
+    immediate: true,
+  }
+);
 
 const mutation = new MutationObserver((mutations) => {
   mutations.forEach((mutation) => {
@@ -61,6 +78,10 @@ const createWaterMasker = (content = "watermasker") => {
 </script>
 
 <style lang="scss" scoped>
+nav {
+  display: flex;
+  justify-content: center;
+}
 .router-name {
   padding: 0 10px;
 
@@ -88,7 +109,6 @@ body {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  text-align: center;
   color: #2c3e50;
   height: 100vh;
   width: 100vw;
