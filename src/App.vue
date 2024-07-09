@@ -14,7 +14,9 @@
       </option>
     </select>
   </nav>
-  <router-view />
+  <main>
+    <router-view />
+  </main>
 </template>
 
 <script lang="ts" setup>
@@ -88,6 +90,12 @@ nav {
   & + & {
     border-left: 2px solid #ccc;
   }
+}
+
+main {
+  padding: 10px;
+  flex: 1;
+  overflow: hidden;
 }
 </style>
 

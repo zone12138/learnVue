@@ -1,3 +1,11 @@
+<!--
+ * @Author: xie 1459547902@qq.com
+ * @Date: 2024-07-04 09:43:10
+ * @LastEditors: xie 1459547902@qq.com
+ * @LastEditTime: 2024-07-08 10:10:25
+ * @FilePath: \vue3-project\src\views\AboutView.vue
+ * @Description: 打字机效果
+-->
 <template>
   <div class="about">
     {{ message }}
@@ -30,12 +38,12 @@ const message = ref(
 .about {
   position: relative;
   font-weight: bold;
+  text-indent: 2em;
+  // word-break: break-all; // 不会因为单词连贯而换行
 
   .contain {
     position: absolute;
     inset: 0;
-    z-index: 1;
-    transition: all 5s linear;
 
     span {
       color: transparent;
