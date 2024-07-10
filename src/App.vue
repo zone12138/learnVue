@@ -1,13 +1,5 @@
 <template>
   <nav>
-    <!-- <router-link
-      class="router-name"
-      v-for="{ name, path } in routes"
-      :key="path"
-      :to="path"
-    >
-      {{ name }}
-    </router-link> -->
     <select v-model="activeRoute">
       <option v-for="{ name, path } in routes" :value="path" :key="path">
         {{ name }}
@@ -15,7 +7,11 @@
     </select>
   </nav>
   <main>
-    <router-view />
+    <router-view v-slot="{ Component }">
+      <keep-alive>
+        <component :is="Component" />
+      </keep-alive>
+    </router-view>
   </main>
 </template>
 
@@ -81,6 +77,7 @@ const createWaterMasker = (content = "watermasker") => {
 
 <style lang="scss" scoped>
 nav {
+  padding: 16px;
   display: flex;
   justify-content: center;
 }
@@ -124,18 +121,5 @@ body {
   flex-direction: column;
   overflow: hidden;
   position: relative;
-}
-
-nav {
-  padding: 30px;
-}
-
-nav a {
-  font-weight: bold;
-  color: #2c3e50;
-}
-
-nav a.router-link-exact-active {
-  color: #42b983;
 }
 </style>

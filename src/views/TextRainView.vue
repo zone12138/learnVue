@@ -1,3 +1,11 @@
+<!--
+ * @Author: xie 1459547902@qq.com
+ * @Date: 2024-07-10 09:26:22
+ * @LastEditors: xie 1459547902@qq.com
+ * @LastEditTime: 2024-07-10 17:27:47
+ * @FilePath: \vue3-project\src\views\TextRainView.vue
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+-->
 <template>
   <div ref="canvasContainer">
     <canvas ref="canvas"></canvas>
@@ -5,32 +13,59 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted } from "vue";
+import {
+  ref,
+  onMounted,
+  onActivated,
+  onDeactivated,
+  onBeforeUnmount,
+} from "vue";
 const canvasContainer = ref<HTMLDivElement>();
 const canvas = ref<HTMLCanvasElement>();
 let ctx: CanvasRenderingContext2D | null;
-const fontSize = 14;
+const fontSize = 14 * devicePixelRatio;
 let column: number;
 let charIndex: Array<number>;
+let timer: number;
 
 onMounted(() => {
-  const width: number = canvasContainer.value!.clientWidth;
-  const height: number = canvasContainer.value!.clientHeight;
+  console.log("onMounted");
+});
+
+onActivated(() => {
+  console.log("onActivated");
+  init();
+});
+
+onDeactivated(() => {
+  console.log("onDeactivated");
+  clearInterval(timer);
+});
+
+onBeforeUnmount(() => {
+  console.log("onBeforeUnmount");
+  clearInterval(timer);
+});
+
+const init = () => {
+  const width: number = canvasContainer.value!.clientWidth * devicePixelRatio;
+  const height: number = canvasContainer.value!.clientHeight * devicePixelRatio;
   ctx = canvas.value!.getContext("2d");
+  ctx!.scale(devicePixelRatio, devicePixelRatio);
   canvas.value!.height = height;
   canvas.value!.width = width;
   column = Math.floor(width / fontSize);
   charIndex = Array.from({ length: column }, () => 0);
   draw();
-  setInterval(draw, 30);
-});
+  timer = window.setInterval(draw, 30);
+};
 
 const draw = () => {
   ctx!.fillStyle = "rgba(0,0,0,0.1)";
   ctx!.fillRect(0, 0, canvas.value!.width, canvas.value!.height);
   ctx!.fillStyle = "#00ff00";
   ctx!.textBaseline = "top";
-  ctx!.font = "14px sans-serif";
+  ctx!.font = `${fontSize}px sans-serif`;
 
   for (let i = 0; i < column; i++) {
     ctx?.fillText(getRandomChar(), i * fontSize, charIndex[i] * fontSize);
@@ -46,7 +81,7 @@ const draw = () => {
 };
 
 const getRandomChar = () => {
-  const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXTZabcdefghiklmnopqrstuvwxyz";
+  const chars = "0123456789abcdefghijklmnopqrstuvwxyz";
   return chars[Math.floor(Math.random() * chars.length)];
 };
 </script>
