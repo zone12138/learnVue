@@ -9,7 +9,7 @@
 <template>
   <div ref="canvasContainer" class="img-magnifier">
     <div class="img-magnifier__img" ref="imgContainer">
-      <img ref="image" alt="" srcset="" />
+      <img ref="image" :src="getRandomImage()" alt="" srcset="" />
       <div class="img-magnifier__img__area" ref="areaContainer"></div>
     </div>
     <canvas ref="canvas"></canvas>
@@ -26,7 +26,6 @@ import {
 } from "vue";
 import { useImage } from "../hook/useImage";
 const { getRandomImage } = useImage();
-let imgPath = ref("");
 const imgContainer = ref<HTMLDivElement>();
 const image = ref<HTMLImageElement>();
 const areaContainer = ref<HTMLDivElement>();
@@ -40,9 +39,6 @@ let areaBgColor = ref("rgba(255, 255, 255, 0.2)");
 
 onMounted(() => {
   console.log("onMounted");
-  imgPath.value = getRandomImage();
-  if (!image.value) return;
-  image.value.src = getRandomImage();
   init();
   imgContainer.value?.addEventListener("mousemove", handleMousemove);
   imgContainer.value?.addEventListener("mouseover", handleMouseover);

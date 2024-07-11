@@ -8,29 +8,15 @@
 -->
 <template>
   <div class="grid">
-    <div class="grid-card" v-for="item in imageArr" :key="item">
+    <div class="grid-card" v-for="item in getImage(13)" :key="item">
       <img :src="item" alt="" />
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { ref } from "vue";
-const imageArr = ref([
-  "http://p15.qhimg.com/t0102e8b4ee4d05636a.jpg",
-  "http://p16.qhimg.com/t017f7a2395db6de879.jpg",
-  "http://p19.qhimg.com/t01ac4e0b17cd4465f3.jpg",
-  "http://p16.qhimg.com/t018e953fdd4266aebe.jpg",
-  "http://p19.qhimg.com/t0151309202cd85dc7a.jpg",
-  "http://p15.qhimg.com/t0114fed81a50837050.jpg",
-  "http://p15.qhimg.com/t01ca637fbd3fc2927e.jpg",
-  "http://p18.qhimg.com/t0198d2c0447d99569e.jpg",
-  "http://p18.qhimg.com/t01fa426a58807bf4ba.jpg",
-  "http://p15.qhimg.com/t0152bec756e80346e8.jpg",
-  "http://p19.qhimg.com/t01c05a430b7d7ac81b.jpg",
-  "http://p19.qhimg.com/t0165a1825aaeb23b5a.jpg",
-  "http://p18.qhimg.com/t0166f47c6a4785af9e.jpg",
-]);
+import { useImage } from "../hook/useImage";
+const { getImage } = useImage();
 </script>
 
 <style lang="scss" scoped>
