@@ -2,9 +2,9 @@
  * @Author: xie 1459547902@qq.com
  * @Date: 2024-07-10 09:26:22
  * @LastEditors: xie 1459547902@qq.com
- * @LastEditTime: 2024-07-10 17:27:47
+ * @LastEditTime: 2024-07-11 11:59:31
  * @FilePath: \vue3-project\src\views\TextRainView.vue
- * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+ * @Description: 文字雨
 -->
 <template>
   <div ref="canvasContainer">
@@ -48,31 +48,30 @@ onBeforeUnmount(() => {
 });
 
 const init = () => {
-  const width: number = canvasContainer.value!.clientWidth * devicePixelRatio;
-  const height: number = canvasContainer.value!.clientHeight * devicePixelRatio;
-  ctx = canvas.value!.getContext("2d");
-  ctx!.scale(devicePixelRatio, devicePixelRatio);
-  canvas.value!.height = height;
-  canvas.value!.width = width;
-  column = Math.floor(width / fontSize);
+  if (!canvasContainer.value) return;
+  if (!canvas.value) return;
+  ctx = canvas.value.getContext("2d");
+  if (!ctx) return;
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  canvas.value.height = canvasContainer.value.clientHeight * devicePixelRatio;
+  canvas.value.width = canvasContainer.value.clientWidth * devicePixelRatio;
+  column = Math.floor(canvas.value.width / fontSize);
   charIndex = Array.from({ length: column }, () => 0);
   draw();
   timer = window.setInterval(draw, 30);
 };
 
 const draw = () => {
-  ctx!.fillStyle = "rgba(0,0,0,0.1)";
-  ctx!.fillRect(0, 0, canvas.value!.width, canvas.value!.height);
-  ctx!.fillStyle = "#00ff00";
-  ctx!.textBaseline = "top";
-  ctx!.font = `${fontSize}px sans-serif`;
+  if (!ctx || !canvas.value) return;
+  ctx.fillStyle = "rgba(0,0,0,0.1)";
+  ctx?.fillRect(0, 0, canvas.value.width, canvas.value.height);
+  ctx.fillStyle = "#00ff00";
+  ctx.textBaseline = "top";
+  ctx.font = `${fontSize}px sans-serif`;
 
   for (let i = 0; i < column; i++) {
     ctx?.fillText(getRandomChar(), i * fontSize, charIndex[i] * fontSize);
-    if (
-      charIndex[i] * fontSize > canvas.value!.height &&
-      Math.random() > 0.99
-    ) {
+    if (charIndex[i] * fontSize > canvas.value.height && Math.random() > 0.99) {
       charIndex[i] = 0;
     } else {
       charIndex[i]++;
