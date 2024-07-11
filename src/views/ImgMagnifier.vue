@@ -9,12 +9,7 @@
 <template>
   <div ref="canvasContainer" class="img-magnifier">
     <div class="img-magnifier__img" ref="imgContainer">
-      <img
-        ref="image"
-        src="http://p15.qhimg.com/t0102e8b4ee4d05636a.jpg"
-        alt=""
-        srcset=""
-      />
+      <img ref="image" alt="" srcset="" />
       <div class="img-magnifier__img__area" ref="areaContainer"></div>
     </div>
     <canvas ref="canvas"></canvas>
@@ -29,6 +24,9 @@ import {
   onDeactivated,
   onBeforeUnmount,
 } from "vue";
+import { useImage } from "../hook/useImage";
+const { getRandomImage } = useImage();
+let imgPath = ref("");
 const imgContainer = ref<HTMLDivElement>();
 const image = ref<HTMLImageElement>();
 const areaContainer = ref<HTMLDivElement>();
@@ -38,9 +36,13 @@ let areaStatus = ref("none");
 let areaLeft = ref("0px");
 let areaTop = ref("0px");
 const areaSize = ref("100px");
+let areaBgColor = ref("rgba(255, 255, 255, 0.2)");
 
 onMounted(() => {
   console.log("onMounted");
+  imgPath.value = getRandomImage();
+  if (!image.value) return;
+  image.value.src = getRandomImage();
   init();
   imgContainer.value?.addEventListener("mousemove", handleMousemove);
   imgContainer.value?.addEventListener("mouseover", handleMouseover);
@@ -96,6 +98,27 @@ const handleMousemove = (e: MouseEvent) => {
     canvas.value.width,
     canvas.value.height
   );
+
+  const imageData = ctx?.getImageData(
+    0,
+    0,
+    canvas.value.width,
+    canvas.value.height
+  );
+  const data = imageData?.data || [];
+
+  let totalLuminance = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+
+    const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    totalLuminance += luminance;
+  }
+  const averageLuminance = totalLuminance / (data.length / 4);
+  areaBgColor.value =
+    averageLuminance > 128 ? "rgba(0, 0, 0, 0.2)" : "rgba(255, 255, 255, 0.2)";
 };
 
 const handleMouseover = () => {
@@ -144,7 +167,7 @@ const calcBounds = (
       height: v-bind(areaSize);
       background-blend-mode: lighten;
       display: v-bind(areaStatus);
-      background: rgba($color: #fff, $alpha: 0.2);
+      background: v-bind(areaBgColor);
       cursor: grab;
     }
   }
