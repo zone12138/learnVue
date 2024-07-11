@@ -52,9 +52,13 @@ const init = () => {
   if (!canvas.value) return;
   ctx = canvas.value.getContext("2d");
   if (!ctx) return;
+  const height = canvasContainer.value.clientHeight;
+  const width = canvasContainer.value.clientWidth;
+  canvas.value.style.height = height + "px";
+  canvas.value.style.width = width + "px";
+  canvas.value.height = height * devicePixelRatio;
+  canvas.value.width = width * devicePixelRatio;
   ctx.scale(devicePixelRatio, devicePixelRatio);
-  canvas.value.height = canvasContainer.value.clientHeight * devicePixelRatio;
-  canvas.value.width = canvasContainer.value.clientWidth * devicePixelRatio;
   column = Math.floor(canvas.value.width / fontSize);
   charIndex = Array.from({ length: column }, () => 0);
   draw();
