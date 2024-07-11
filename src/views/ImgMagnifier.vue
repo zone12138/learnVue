@@ -10,6 +10,7 @@
   <div ref="canvasContainer" class="img-magnifier">
     <div class="img-magnifier__img" ref="imgContainer">
       <img
+        ref="image"
         src="http://p15.qhimg.com/t0102e8b4ee4d05636a.jpg"
         alt=""
         srcset=""
@@ -29,6 +30,7 @@ import {
   onBeforeUnmount,
 } from "vue";
 const imgContainer = ref<HTMLDivElement>();
+const image = ref<HTMLImageElement>();
 const areaContainer = ref<HTMLDivElement>();
 const canvas = ref<HTMLCanvasElement>();
 let ctx: CanvasRenderingContext2D | null;
@@ -63,7 +65,7 @@ const init = () => {
   canvas.value.width = 300;
   ctx = canvas.value.getContext("2d");
   if (!ctx) return;
-  ctx.scale(devicePixelRatio, devicePixelRatio);
+  // ctx.scale(devicePixelRatio, devicePixelRatio);
 };
 
 const handleMousemove = (e: MouseEvent) => {
@@ -80,7 +82,20 @@ const handleMousemove = (e: MouseEvent) => {
   areaTop.value =
     calcBounds(clientY - top, height, parseFloat(areaSize.value)) + "px";
 
-  // ctx?.drawImage();
+  if (!image.value || !canvas.value) return;
+  const XRatio = image.value.width / image.value.naturalWidth;
+  const YRatio = image.value.height / image.value.naturalHeight;
+  ctx?.drawImage(
+    image.value,
+    parseFloat(areaLeft.value) / XRatio,
+    parseFloat(areaTop.value) / YRatio,
+    parseFloat(areaSize.value) / XRatio,
+    parseFloat(areaSize.value) / YRatio,
+    0,
+    0,
+    canvas.value.width,
+    canvas.value.height
+  );
 };
 
 const handleMouseover = () => {
@@ -107,6 +122,9 @@ const calcBounds = (
 .img-magnifier {
   height: 100%;
   width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 
   &__img {
     position: relative;
@@ -129,6 +147,9 @@ const calcBounds = (
       background: rgba($color: #fff, $alpha: 0.2);
       cursor: grab;
     }
+  }
+  canvas {
+    margin-left: 8px;
   }
 }
 </style>
