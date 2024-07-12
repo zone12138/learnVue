@@ -2,7 +2,7 @@
  * @Author: xie 1459547902@qq.com
  * @Date: 2024-07-11 14:42:15
  * @LastEditors: xie 1459547902@qq.com
- * @LastEditTime: 2024-07-12 09:37:04
+ * @LastEditTime: 2024-07-12 11:29:34
  * @FilePath: \vue3-project\src\views\FireworkView.vue
  * @Description: 放大器
 -->
@@ -62,7 +62,7 @@ const init = () => {
   canvas.value.height = 300;
   canvas.value.width = 300;
   ctx = canvas.value.getContext("2d");
-  if (!ctx) return;
+  // if (!ctx) return;
   // ctx.scale(devicePixelRatio, devicePixelRatio);
 };
 
@@ -169,6 +169,7 @@ const calcBounds = (
   }
   canvas {
     margin-left: 8px;
+    border: 1px solid #ccc;
   }
 }
 </style>
