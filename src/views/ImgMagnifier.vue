@@ -2,14 +2,19 @@
  * @Author: xie 1459547902@qq.com
  * @Date: 2024-07-11 14:42:15
  * @LastEditors: xie 1459547902@qq.com
- * @LastEditTime: 2024-07-11 14:50:11
+ * @LastEditTime: 2024-07-12 09:16:13
  * @FilePath: \vue3-project\src\views\FireworkView.vue
  * @Description: 放大器
 -->
 <template>
   <div ref="canvasContainer" class="img-magnifier">
     <div class="img-magnifier__img" ref="imgContainer">
-      <img ref="image" :src="getRandomImage()" alt="" srcset="" />
+      <img
+        ref="image"
+        src="http://p15.qhimg.com/t0102e8b4ee4d05636a.jpg"
+        alt=""
+        srcset=""
+      />
       <div class="img-magnifier__img__area" ref="areaContainer"></div>
     </div>
     <canvas ref="canvas"></canvas>
@@ -80,41 +85,19 @@ const handleMousemove = (e: MouseEvent) => {
   areaTop.value =
     calcBounds(clientY - top, height, parseFloat(areaSize.value)) + "px";
 
-  if (!image.value || !canvas.value) return;
-  const XRatio = image.value.width / image.value.naturalWidth;
-  const YRatio = image.value.height / image.value.naturalHeight;
+  if (!image.value) return;
+
   ctx?.drawImage(
     image.value,
-    parseFloat(areaLeft.value) / XRatio,
-    parseFloat(areaTop.value) / YRatio,
-    parseFloat(areaSize.value) / XRatio,
-    parseFloat(areaSize.value) / YRatio,
     0,
     0,
-    canvas.value.width,
-    canvas.value.height
+    image.value?.width || 0,
+    image.value?.height || 0,
+    0,
+    0,
+    canvas.value?.width || 0,
+    canvas.value?.height || 0
   );
-
-  const imageData = ctx?.getImageData(
-    0,
-    0,
-    canvas.value.width,
-    canvas.value.height
-  );
-  const data = imageData?.data || [];
-
-  let totalLuminance = 0;
-  for (let i = 0; i < data.length; i += 4) {
-    const r = data[i];
-    const g = data[i + 1];
-    const b = data[i + 2];
-
-    const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    totalLuminance += luminance;
-  }
-  const averageLuminance = totalLuminance / (data.length / 4);
-  areaBgColor.value =
-    averageLuminance > 128 ? "rgba(0, 0, 0, 0.2)" : "rgba(255, 255, 255, 0.2)";
 };
 
 const handleMouseover = () => {
