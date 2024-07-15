@@ -1,5 +1,23 @@
+/*
+ * @Author: xie 1459547902@qq.com
+ * @Date: 2024-07-04 09:43:10
+ * @LastEditors: xie 1459547902@qq.com
+ * @LastEditTime: 2024-07-15 11:41:49
+ * @FilePath: \vue3-project\src\main.ts
+ * @Description: main 入口文件
+ */
 import { createApp } from "vue";
 import App from "./App.vue";
 import router from "./router";
 
-createApp(App).use(router).mount("#app");
+const app = createApp(App);
+
+// vue3 定义全局方法
+app.config.globalProperties.$filters = {
+  formatDate(value: string) {
+    const date = new Date(value);
+    return date.toLocaleDateString();
+  },
+};
+
+app.use(router).mount("#app");

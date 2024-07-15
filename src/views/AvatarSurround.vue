@@ -1,3 +1,11 @@
+<!--
+ * @Author: xie 1459547902@qq.com
+ * @Date: 2024-07-15 10:09:22
+ * @LastEditors: xie 1459547902@qq.com
+ * @LastEditTime: 2024-07-15 10:27:49
+ * @FilePath: \vue3-project\src\views\AvatarSurround.vue
+ * @Description: 环绕
+-->
 <template>
   <div class="avatar-surround">
     <div class="avatar-surround__content" :style="{ '--count': count }">
