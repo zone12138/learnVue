@@ -2,7 +2,7 @@
  * @Author: xie 1459547902@qq.com
  * @Date: 2024-07-17 10:09:02
  * @LastEditors: xie 1459547902@qq.com
- * @LastEditTime: 2024-07-17 10:18:05
+ * @LastEditTime: 2024-07-17 14:28:34
  * @FilePath: \vue3-project\src\views\MixBlendMode.vue
  * @Description: mix-blend-mode: defferent
 -->
@@ -15,10 +15,10 @@
 <style lang="scss" scoped>
 @keyframes move {
   0% {
-    transform: translate(-30%, -50%);
+    transform: translate(-25%, -50%);
   }
   100% {
-    transform: translate(-70%, -50%);
+    transform: translate(-75%, -50%);
   }
 }
 .mix-blend-mode {
