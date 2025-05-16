@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div id="app" show-export></div>
+
+    <script>
+      const vnode = {
+        tag: "div",
+        props: {
+          onClick: () => alert("hello"),
+        },
+        children: "click me",
+      };
+
+      const render = (vNode, container) => {
+        const el = document.createElement(vNode.tag);
+
+        for (const key in vNode.props) {
+          if (key.startsWith("on")) {
+            el.addEventListener(
+              key.substring(2).toLocaleLowerCase(),
+              vNode.props[key]
+            );
+          } else {
+            el.setAttribute(key, vNode.props[key]);
+          }
+        }
+
+        if (Array.isArray(vNode.children)) {
+          vNode.children.forEach((element) => {
+            render(element, el);
+          });
+        } else if (typeof vNode.children === "string") {
+          el.appendChild(document.createTextNode(vNode.children));
+        }
+
+        container.appendChild(el);
+      };
+
+      render(vnode, document.body)
+    </script>
+  </body>
+</html>
