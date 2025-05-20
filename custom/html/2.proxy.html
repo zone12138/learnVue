@@ -70,13 +70,12 @@
       const bucket = new WeakMap();
 
       const effect = (fn) => {
-
         // 闭包
         const effectFn = () => {
-          cleanup(effectFn)
+          cleanup(effectFn);
           activeEffect = effectFn;
           fn();
-        }
+        };
 
         effectFn.deps = [];
         effectFn();
@@ -107,11 +106,11 @@
           deps.delete(effectFn);
         }
         effectFn.deps.length = 0;
-      }
+      };
 
       const data = {
         text: "hello world",
-        ok: true
+        ok: true,
       };
 
       const obj = new Proxy(data, {
@@ -121,25 +120,42 @@
         },
         set(target, key, value) {
           target[key] = value;
-          console.log("before trigger", key, value);
           trigger(target, key);
-          console.log("after trigger", key, value);
           return true;
         },
       });
 
       effect(() => {
-        console.log("effect run");
         // document.body.innerHTML = obj.text;
-        document.body.innerText = obj.ok ? obj.text : 'not'
+        document.body.innerText = obj.ok ? obj.text : 'not';
       });
 
       setTimeout(() => {
-        console.log("====================== setTimeout ======================")
-        obj.ok = false
-        // obj.text = "hello vue3";
+        console.log("====================== setTimeout ======================");
+        obj.ok = false;
+        obj.text = "hello vue3";
         // obj.notExist = "hello vue3";
       }, 1000);
+
+      let activeFoo, activeFoo_bk, count = 1, nmap = new Map()
+      const foo = (fn) => {
+        // 闭包
+        // const effectFn = () => {
+          activeFoo = fn;
+          if (count == 1) activeFoo_bk = fn
+          count ++
+          fn();
+        // };
+        fn.deps = [12]
+        // effectFn.deps = [];
+        // effectFn();
+        nmap.set(count, fn)
+      };
+
+      foo(() => {})
+      foo(() => {})
+
+      console.log(nmap)
     </script>
   </body>
 </html>

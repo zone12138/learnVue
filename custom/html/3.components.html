@@ -2,7 +2,7 @@
  * @Author: xie 1459547902@qq.com
  * @Date: 2025-05-15 15:05:36
  * @LastEditors: xie 1459547902@qq.com
- * @LastEditTime: 2025-05-16 14:38:50
+ * @LastEditTime: 2025-05-20 10:37:21
  * @FilePath: \learn_rollup\proxy.html
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
 -->
@@ -64,20 +64,36 @@
         set.add(1)
         console.log("set")
       })
+
+
+      #2 代码的作用是，阻止effect嵌套时effectFn错乱
+      增加了栈，通过出栈，恢复初层嵌套的effectFn正确性
+
+      #3 代码的作用是，阻止无限递归循环
+      eg：
+      effect(() => {
+        obj.count ++
+      })
+      如果 trigger 触发执行的副作用函数与当前正在执行的副
+      作用函数相同，则不触发执行
+
     -->
     <script>
       let activeEffect;
+      const effectStack = [];
       const bucket = new WeakMap();
 
       const effect = (fn) => {
-
         // 闭包
         const effectFn = () => {
-          cleanup(effectFn)
+          cleanup(effectFn);
           activeEffect = effectFn;
+          // 在调用副作用函数之前将当前副作用函数压入栈中
+          effectStack.push(effectFn); // #2
           fn();
-        }
-
+          effectStack.pop() // #2
+          activeEffect = effectStack[effectStack.length - 1]; // #2
+        };
         effectFn.deps = [];
         effectFn();
       };
@@ -97,7 +113,14 @@
         if (!depsMap) return;
         const effects = depsMap.get(key);
         // #1 v3
-        const effectsToRun = new Set(effects);
+        // const effectsToRun = new Set(effects);
+        // #3 
+        const effectsToRun = new Set()
+        effects && effects.forEach((effectFn) => {
+          if (effectFn !== activeEffect) {
+            effectsToRun.add(effectFn)
+          }
+        })
         effectsToRun.forEach((fn) => fn());
       };
 
@@ -107,36 +130,44 @@
           deps.delete(effectFn);
         }
         effectFn.deps.length = 0;
-      }
+      };
 
       const data = {
         text: "hello world",
-        ok: true
+        ok: true,
+        count: 0
       };
 
       const obj = new Proxy(data, {
         get(target, key) {
+          console.log("track", key)
           track(target, key);
           return target[key];
         },
         set(target, key, value) {
           target[key] = value;
-          console.log("before trigger", key, value);
           trigger(target, key);
-          console.log("after trigger", key, value);
           return true;
         },
       });
 
-      effect(() => {
-        console.log("effect run");
-        // document.body.innerHTML = obj.text;
-        document.body.innerText = obj.ok ? obj.text : 'not'
+      let temp1, temp2;
+
+      effect(function foo() {
+        console.log("1. effect1 run");
+        
+        effect(function bar() {
+          console.log("2. effect2 run");
+          temp2 = obj.text;
+        });
+        
+        temp1 = obj.ok;
+        obj.count++
       });
 
       setTimeout(() => {
-        console.log("====================== setTimeout ======================")
-        obj.ok = false
+        console.log("====================== setTimeout ======================");
+        obj.ok = false;
         // obj.text = "hello vue3";
         // obj.notExist = "hello vue3";
       }, 1000);

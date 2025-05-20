@@ -1,0 +1,193 @@
+<!--
+ * @Author: xie 1459547902@qq.com
+ * @Date: 2025-05-15 15:05:36
+ * @LastEditors: xie 1459547902@qq.com
+ * @LastEditTime: 2025-05-20 10:37:21
+ * @FilePath: \learn_rollup\proxy.html
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+-->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <!--
+      #1 代码的作用，阻止无限循环
+
+      假设有一个 set 变量
+      `const set = new Set()`
+
+      [1].effectFn 触发时, 由于获取obj.ok的值，触发了track函数
+      `set.add(effectFn)`
+
+      【1】收集阶段
+      第一次收集依赖时
+      cleanup 触发，此时由于set中无值，无效果
+      effectFn 触发，
+      track 触发，此时，set值为：
+      `set => Set(1) {effectFn}`
+
+      【2】触发阶段 （obj.ok值发生变化）
+      trigger 触发
+      cleanup 作用等同于 set.delete(effectFn)
+      `set => Set(0) {}`
+      effectFn 触发[1]（会一直收集，触发，循环发生）
+
+      eg: 
+
+      1. 不会无限循环
+      (所以注释  activeEffect.deps.push(deps); 这段代码不会陷入无限循环)
+      【因为 activeEffect.deps 一直为空，不存在 set.delete(1) 类似操作】
+      const set = new Set([1])
+      set.forEach(() => {
+        set.add(1)
+        console.log("set")
+      })
+
+      2. 会无限循环
+      （所以没有 #1 代码时，会触发无限循环）
+      const set = new Set([1])
+      set.forEach(() => {
+        set.delete(1)
+        set.add(1)
+        console.log("set")
+      })
+
+      3. 修复2中无限循环问题
+      const set = new Set([1])
+      const newset = new Set(set)
+      newset.forEach(() => {
+        set.delete(1)
+        set.add(1)
+        console.log("set")
+      })
+
+
+      #2 代码的作用是，阻止effect嵌套时effectFn错乱
+      增加了栈，通过出栈，恢复初层嵌套的effectFn正确性
+
+      #3 代码的作用是，阻止无限递归循环
+      eg：
+      effect(() => {
+        obj.count ++
+      })
+      如果 trigger 触发执行的副作用函数与当前正在执行的副
+      作用函数相同，则不触发执行
+
+    -->
+    <script>
+      let activeEffect;
+      const effectStack = [];
+      const bucket = new WeakMap();
+
+      const effect = (fn, options = {}) => {
+        // 闭包
+        const effectFn = () => {
+          cleanup(effectFn);
+          activeEffect = effectFn;
+          // 在调用副作用函数之前将当前副作用函数压入栈中
+          effectStack.push(effectFn); // #2
+          fn();
+          effectStack.pop(); // #2
+          activeEffect = effectStack[effectStack.length - 1]; // #2
+        };
+        effectFn.deps = [];
+        effectFn.options = options; // #4
+        effectFn();
+      };
+
+      const track = (target, key) => {
+        if (!activeEffect) return;
+        let depsMap = bucket.get(target);
+        if (!depsMap) bucket.set(target, (depsMap = new Map()));
+        let deps = depsMap.get(key);
+        if (!deps) depsMap.set(key, (deps = new Set()));
+        deps.add(activeEffect);
+        activeEffect.deps.push(deps);
+      };
+
+      const trigger = (target, key) => {
+        const depsMap = bucket.get(target);
+        if (!depsMap) return;
+        const effects = depsMap.get(key);
+        // #1 v3
+        // const effectsToRun = new Set(effects);
+        // #3
+        const effectsToRun = new Set();
+        effects &&
+          effects.forEach((effectFn) => {
+            if (effectFn !== activeEffect) {
+              effectsToRun.add(effectFn);
+            }
+          });
+        effectsToRun.forEach((effectFn) => {
+          if (effectFn.options.scheduler) {
+            // #4
+            effectFn.options.scheduler(effectFn); // #4
+          } else {
+            effectFn();
+          }
+        });
+      };
+
+      const cleanup = (effectFn) => {
+        for (let i = 0; i < effectFn.deps.length; i++) {
+          const deps = effectFn.deps[i];
+          deps.delete(effectFn);
+        }
+        effectFn.deps.length = 0;
+      };
+
+      const data = {
+        text: "hello world",
+        ok: true,
+        count: 0,
+      };
+
+      const obj = new Proxy(data, {
+        get(target, key) {
+          track(target, key);
+          return target[key];
+        },
+        set(target, key, value) {
+          target[key] = value;
+          trigger(target, key);
+          return true;
+        },
+      });
+
+      const jobQueue = new Set()
+      const p = Promise.resolve()
+      let isFlushing = false
+
+      const flushJob = () => {
+        if (isFlushing) return 
+        isFlushing = true
+        p.then(() => {
+          jobQueue.forEach(jobFn => jobFn())
+        }).finally(() => {
+          isFlushing = false
+        })
+      }
+
+      effect(
+        function foo() {
+          console.log("1. effect1 run", obj.count);
+        },
+        // 注释下面这个options看看区别
+        {
+          scheduler(fn) {
+            setTimeout(fn);
+          },
+        }
+      );
+      obj.count++
+      obj.count++
+      console.log("结束了")
+      
+    </script>
+  </body>
+</html>
