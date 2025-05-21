@@ -2,7 +2,7 @@
  * @Author: xie 1459547902@qq.com
  * @Date: 2025-05-15 15:05:36
  * @LastEditors: xie 1459547902@qq.com
- * @LastEditTime: 2025-05-21 09:04:03
+ * @LastEditTime: 2025-05-21 11:20:17
  * @FilePath: \learn_rollup\proxy.html
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
 -->
@@ -78,6 +78,8 @@
       作用函数相同，则不触发执行
 
       #4 调度执行，控制执行顺序【同步、异步】
+
+      #5 computed的实现，缓存值【lazy】
     -->
     <script>
       let activeEffect;
@@ -91,13 +93,18 @@
           activeEffect = effectFn;
           // 在调用副作用函数之前将当前副作用函数压入栈中
           effectStack.push(effectFn); // #2
-          fn();
+          const res = fn(); // #5 将 fn 的执行结果存储到 res 中
           effectStack.pop(); // #2
           activeEffect = effectStack[effectStack.length - 1]; // #2
+          return res // #5 将 res 作为 effectFn 的返回值
         };
         effectFn.deps = [];
         effectFn.options = options; // #4
-        effectFn();
+        // #5
+        if (!options.lazy) {
+          effectFn();
+        }
+        return effectFn;
       };
 
       const track = (target, key) => {
@@ -160,38 +167,76 @@
         },
       });
 
-      // #4 
+      // #4
       // 利用 Set 数据结构的自动去重能力
-      const jobQueue = new Set()
-      const p = Promise.resolve()
-      let isFlushing = false // point
+      const jobQueue = new Set();
+      const p = Promise.resolve();
+      let isFlushing = false; // point
       const flushJob = () => {
-        if (isFlushing) return 
-        isFlushing = true
+        if (isFlushing) return;
+        isFlushing = true;
         p.then(() => {
-          jobQueue.forEach(jobFn => jobFn())
+          jobQueue.forEach((jobFn) => jobFn());
         }).finally(() => {
-          isFlushing = false
+          isFlushing = false;
+        });
+      };
+
+      // #5
+      const computed = (getter) => {
+        let value, dirty = true
+        // 把 getter 作为副作用函数，创建一个 lazy 的 effect
+        const effectFn = effect(getter, {
+          lazy: true,
+          scheduler() {
+            if (!dirty) {
+              console.log("重置了 dirty")
+              dirty = true
+              // 手动触发 trigger
+              trigger(obj, 'value')
+            }
+          }
         })
+
+        const obj = {
+          get value() {
+            if (dirty) {
+              console.log("effectFn 执行了")
+              value = effectFn()
+              dirty = false
+            }
+            // 手动触发 track
+            track(obj, 'value')
+            return value
+          }
+        }
+
+        return obj
       }
 
-      effect(
-        function foo() {
-          console.log("1. effect1 run", obj.count);
-        },
-        // 注释下面这个options看看区别
-        {
-          scheduler(fn) {
-            // setTimeout(fn);
-            jobQueue.add(fn) // #4
-            flushJob() // #4
-          },
-        }
-      );
-      obj.count++
-      obj.count++
-      console.log("结束了")
+      const sumRes = computed(() => obj.ok + obj.text)
+      console.log(`%c[Log]`,'color: #00ff; font-weight: 1000; font-family: Microsoft YaHei',' ☀『sumRes』☀ ', sumRes.value);
+      console.log(`%c[Log]`,'color: #00ff; font-weight: 1000; font-family: Microsoft YaHei',' ☀『sumRes』☀ ', sumRes.value);
+      console.log(`%c[Log]`,'color: #00ff; font-weight: 1000; font-family: Microsoft YaHei',' ☀『sumRes』☀ ', sumRes.value);
+      obj.text = "dkksk"
+      console.log(`%c[Log]`,'color: #00ff; font-weight: 1000; font-family: Microsoft YaHei',' ☀『sumRes』☀ ', sumRes.value);
+      console.log(`%c[Log]`,'color: #00ff; font-weight: 1000; font-family: Microsoft YaHei',' ☀『sumRes』☀ ', sumRes.value);
+      console.log(`%c[Log]`,'color: #00ff; font-weight: 1000; font-family: Microsoft YaHei',' ☀『sumRes』☀ ', sumRes.value);
+      console.log(`%c[Log]`,'color: #00ff; font-weight: 1000; font-family: Microsoft YaHei',' ☀『sumRes』☀ ', sumRes.value);
       
-    </script>
+
+      console.log("==========================================================")
+
+      effect(() => {
+        // 相当于嵌套effect
+        console.log(sumRes.value)
+      })
+
+      setTimeout(() => {
+        console.log("=================== setTimeout ======================")
+        obj.ok = false
+      }, 1000)
+      
+      </script>
   </body>
 </html>
