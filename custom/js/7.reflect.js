@@ -67,6 +67,7 @@
 let activeEffect;
 const effectStack = [];
 const bucket = new WeakMap();
+const ITERATE_KEY = Symbol();
 
 /**
  * effect
@@ -117,22 +118,37 @@ const track = (target, key) => {
  * trigger 触发
  * @param {Object} target 目标
  * @param {string} key 键值
+ * @param {('SET' | 'ADD' | 'DELETE')} type 类型
  * @returns
  */
-const trigger = (target, key) => {
+const trigger = (target, key, type) => {
   const depsMap = bucket.get(target);
   if (!depsMap) return;
+  // 取得与 key 相关联的副作用函数
   const effects = depsMap.get(key);
+  // 取得与 ITERATE_KEY 相关联的副作用函数
+  const iterateEffects = depsMap.get(ITERATE_KEY);
   // #1 v3
   // const effectsToRun = new Set(effects);
   // #3
   const effectsToRun = new Set();
+  // 将与 key 相关联的副作用函数添加到 effectsToRun
   effects &&
     effects.forEach((effectFn) => {
       if (effectFn !== activeEffect) {
         effectsToRun.add(effectFn);
       }
     });
+  // 只有当操作类型为 'ADD' 或者 'DELETE' (影响for in 循环次数) 时，才触发与 ITERATE_KEY 相关联的副作用函数重新执行
+  if (["ADD", "DELETE"].includes(type)) {
+    // 将与 ITERATE_KEY 相关联的副作用函数也添加到 effectsToRun
+    iterateEffects &&
+      iterateEffects.forEach((effectFn) => {
+        if (effectFn !== activeEffect) {
+          effectsToRun.add(effectFn);
+        }
+      });
+  }
   effectsToRun.forEach((effectFn) => {
     if (effectFn.options.scheduler) {
       // #4
@@ -155,23 +171,53 @@ const cleanup = (effectFn) => {
   effectFn.deps.length = 0;
 };
 
-const data = {
-  text: "hello world",
-  ok: true,
-  count: 0,
-};
+/**
+ * reactive
+ * @param {*} obj 源
+ * @returns
+ */
+const reactive = (obj) => {
+  return new Proxy(obj, {
+    // 普通对象的所有可能的读取操作：
+    // - 访问属性 eg: obj.text ===> (get拦截函数)
+    // - 判断对象或者原型上是否存在给定的key eg: text in obj ===> (has拦截函数)
+    // - 使用for...in循环遍历对象 eg: for(const key in obj) {} ===> (ownKeys拦截函数)
+    get(target, key, receiver) {
+      track(target, key);
+      return Reflect.get(target, key, receiver);
+    },
+    has(target, key) {
+      track(target, key);
+      return Reflect.has(target, key);
+    },
+    ownKeys(target) {
+      track(target, ITERATE_KEY);
+      return Reflect.ownKeys(target);
+    },
+    set(target, key, value, receiver) {
+      const oldVal = target[key];
+      const type = Object.prototype.hasOwnProperty.call(target, key)
+        ? "SET"
+        : "ADD";
+      const res = Reflect.set(target, key, value, receiver);
 
-const obj = new Proxy(data, {
-  get(target, key) {
-    track(target, key);
-    return target[key];
-  },
-  set(target, key, value) {
-    target[key] = value;
-    trigger(target, key);
-    return true;
-  },
-});
+      if (oldVal !== value && (oldVal === oldVal || value === value)) {
+        trigger(target, key, type);
+      }
+      return res;
+    },
+    deleteProperty(target, key) {
+      // Reflect.deleteProperty 删除不存在的key时，也会返回 true，多加一层保险判断
+      const hadKey = Object.prototype.hasOwnProperty(target, key);
+      // 删除不存在的key时，也会返回 true，除了一些无法被删的对象会返回 false，比如 Object.freeze
+      const res = Reflect.deleteProperty(target, key);
+      if (res && hadKey) {
+        trigger(target, key, "DELETE");
+      }
+      return res;
+    },
+  });
+};
 
 // #4
 // 利用 Set 数据结构的自动去重能力
@@ -263,14 +309,14 @@ const watch = (source, cb, options = {}) => {
     getter = () => traverse(source);
   }
 
-  let cleanup
+  let cleanup;
   const onInvalidate = (fn) => {
-    cleanup = fn
-  }
+    cleanup = fn;
+  };
 
   const job = () => {
     newVal = effectFn();
-    if (cleanup) cleanup()
+    if (cleanup) cleanup();
     // a: Object.is(newVal, oldVal) 和 b: newVal === oldVal 的区别在于两点
     // 1. (+0, -0) => a的值为false，b的值为true
     // 2. (NaN, NaN) => a的值为true，b的值为false
@@ -279,7 +325,6 @@ const watch = (source, cb, options = {}) => {
       cb(newVal, oldVal, onInvalidate);
       oldVal = newVal;
     }
-    console.log(count)
   };
 
   const effectFn = effect(() => getter(), {
@@ -305,44 +350,65 @@ const watch = (source, cb, options = {}) => {
   }
 };
 
-let resData
-let count = 0
-
-const fetchFn = () => {
-  return new Promise(resolve => {
-    count++
-    const res = count === 1 ? 'first Data': 'last Data'
-    setTimeout(() => {
-      resolve(res)
-    }, count === 1 ? 2000 : 200)
-  })
-}
-
-watch(
-  () => obj.count,
-  async (n, o, onInvalidate) => {
-    let expired = false
-    onInvalidate(() => {
-      expired = true
-    })
-    // console.log("watch", n, o);
-    const res = await fetchFn()
-    if (!expired) resData = res
+const data = {
+  text: "hello world",
+  ok: true,
+  count: 0,
+  get bar() {
+    // 不使用Reflect的情况下，this 指向的是原始数据 data
+    // 所以 effect 里相当于 effect(() => {data.bar})
+    // console.log("isEqual(data)? :", this === data, ', isEqual(obj)? :', this === obj)
+    return this.text;
   },
-  {
-    immediate: false,
+};
+
+const obj = reactive(data);
+
+effect(() => {
+  // console.log('text' in obj);
+  for (const key in obj) {
+    console.log(
+      `%c[Log]`,
+      "color: #00ff; font-weight: 1000; font-family: Microsoft YaHei",
+      " ☀『key』☀ ",
+      key
+    );
   }
+});
+
+setTimeout(() => {
+  console.log("====================== setTimeout ======================");
+  // obj.ok = false;
+  // obj.text = "hello vue3";
+  obj.abc = "hello vue3";
+  // obj.notExist = "hello vue3";
+}, 1000);
+
+const a = {};
+const a_proto = { bar: 1 };
+
+const child = reactive(a);
+const parent = reactive(a_proto);
+
+Object.setPrototypeOf(child, parent);
+
+console.log(
+  `%c[Log]`,
+  "color: #00ff; font-weight: 1000; font-family: Microsoft YaHei",
+  " ☀『child.bar』☀ ",
+  child.bar
 );
 
-obj.count++
-setTimeout(() => {
-  console.log("change count ==> setTimeout")
-  obj.count++
-}, 100);
-// obj.ok = false;
-// obj.ok = false;
-// obj.ok = false;
+effect(() => {
+  console.log(child.bar);
+});
 
 setTimeout(() => {
-  console.log('resData', resData)
-}, 2000);
+  console.log("====================== setTimeout PLUS ======================");
+  // 如果设置的属性不存在于对象上，那么会取得其
+  // 原型，并调用原型的 [[Set]] 方法，也就是 parent 的 [[Set]] 内
+  // 部方法。由于 parent 是代理对象，所以这就相当于执行了它的 set
+  // 拦截函数。换句话说，虽然我们操作的是 child.bar，但这也会导致
+  // parent 代理对象的 set 拦截函数被执行。
+  child.bar = 2;
+}, 100);
