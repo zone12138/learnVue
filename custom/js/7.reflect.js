@@ -68,6 +68,7 @@ let activeEffect;
 const effectStack = [];
 const bucket = new WeakMap();
 const ITERATE_KEY = Symbol();
+const RAW_KEY = Symbol();
 
 /**
  * effect
@@ -183,6 +184,9 @@ const reactive = (obj) => {
     // - 判断对象或者原型上是否存在给定的key eg: text in obj ===> (has拦截函数)
     // - 使用for...in循环遍历对象 eg: for(const key in obj) {} ===> (ownKeys拦截函数)
     get(target, key, receiver) {
+      if (key === RAW_KEY) {
+        return target
+      }
       track(target, key);
       return Reflect.get(target, key, receiver);
     },
@@ -201,8 +205,10 @@ const reactive = (obj) => {
         : "ADD";
       const res = Reflect.set(target, key, value, receiver);
 
-      if (oldVal !== value && (oldVal === oldVal || value === value)) {
-        trigger(target, key, type);
+      if (target === receiver[RAW_KEY]) {
+        if (oldVal !== value && (oldVal === oldVal || value === value)) {
+          trigger(target, key, type);
+        }
       }
       return res;
     },
@@ -400,6 +406,12 @@ console.log(
 );
 
 effect(() => {
+// 当读取 child.bar 属性值时，由于
+// child 代理的对象 obj 自身没有 bar 属性，因此会获取对象 obj 的
+// 原型，也就是 parent 对象，所以最终得到的实际上是 parent.bar
+// 的值。但是大家不要忘了，parent 本身也是响应式数据，因此在副作
+// 用函数中访问 parent.bar 的值时，会导致副作用函数被收集，从而
+// 也建立响应联系
   console.log(child.bar);
 });
 
