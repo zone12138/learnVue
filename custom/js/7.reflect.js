@@ -173,11 +173,13 @@ const cleanup = (effectFn) => {
 };
 
 /**
- * reactive
+ * createReactive
  * @param {*} obj 源
+ * @param {boolean} [isShallow=false] 是否为浅响应
+ * @param {boolean} [isReadonly=false] 是否为只读
  * @returns
  */
-const reactive = (obj) => {
+const createReactive = (obj, isShallow = false, isReadonly = false) => {
   return new Proxy(obj, {
     // 普通对象的所有可能的读取操作：
     // - 访问属性 eg: obj.text ===> (get拦截函数)
@@ -185,10 +187,21 @@ const reactive = (obj) => {
     // - 使用for...in循环遍历对象 eg: for(const key in obj) {} ===> (ownKeys拦截函数)
     get(target, key, receiver) {
       if (key === RAW_KEY) {
-        return target
+        return target;
       }
-      track(target, key);
-      return Reflect.get(target, key, receiver);
+      // #7 只读的不需要收集
+      if (!isReadonly) {
+        track(target, key);
+      }
+      const res = Reflect.get(target, key, receiver);
+      if (isShallow) {
+        return res;
+      }
+      // #7 解决嵌套对象无法收集依赖的问题(shallowReactive、shallowReadonly)
+      if (typeof res === "object" && res !== null) {
+        return isReadonly ? readonly(res) : reactive(res);
+      }
+      return res;
     },
     has(target, key) {
       track(target, key);
@@ -199,12 +212,16 @@ const reactive = (obj) => {
       return Reflect.ownKeys(target);
     },
     set(target, key, value, receiver) {
+      if (isReadonly) {
+        console.warn(`属性 ${key} 是只读的`);
+        return true;
+      }
       const oldVal = target[key];
       const type = Object.prototype.hasOwnProperty.call(target, key)
         ? "SET"
         : "ADD";
       const res = Reflect.set(target, key, value, receiver);
-
+      // #7 解决原型代理重复触发问题
       if (target === receiver[RAW_KEY]) {
         if (oldVal !== value && (oldVal === oldVal || value === value)) {
           trigger(target, key, type);
@@ -213,6 +230,10 @@ const reactive = (obj) => {
       return res;
     },
     deleteProperty(target, key) {
+      if (isReadonly) {
+        console.warn(`属性 ${key} 是只读的`);
+        return true;
+      }
       // Reflect.deleteProperty 删除不存在的key时，也会返回 true，多加一层保险判断
       const hadKey = Object.prototype.hasOwnProperty(target, key);
       // 删除不存在的key时，也会返回 true，除了一些无法被删的对象会返回 false，比如 Object.freeze
@@ -223,6 +244,42 @@ const reactive = (obj) => {
       return res;
     },
   });
+};
+
+/**
+ * reactive
+ * @param {*} obj 源
+ * @returns
+ */
+const reactive = (obj) => {
+  return createReactive(obj);
+};
+
+/**
+ * shallowReactive
+ * @param {*} obj 源
+ * @returns
+ */
+const shallowReactive = (obj) => {
+  return createReactive(obj, true);
+};
+
+/**
+ * readonly
+ * @param {*} obj 源
+ * @returns
+ */
+const readonly = (obj) => {
+  return createReactive(obj, false, true);
+};
+
+/**
+ * readonly
+ * @param {*} obj 源
+ * @returns
+ */
+const shallowReadonly = (obj) => {
+  return createReactive(obj, true, true);
 };
 
 // #4
@@ -327,10 +384,11 @@ const watch = (source, cb, options = {}) => {
     // 1. (+0, -0) => a的值为false，b的值为true
     // 2. (NaN, NaN) => a的值为true，b的值为false
     // 这里为浅比较， 当deep: true 时，需要递归遍历对比
-    if (!Object.is(newVal, oldVal)) {
-      cb(newVal, oldVal, onInvalidate);
-      oldVal = newVal;
-    }
+    // #7 set拦截函数中增加了新旧值对比判断，这里就不需要了
+    // if (!Object.is(newVal, oldVal)) {
+    cb(newVal, oldVal, onInvalidate);
+    oldVal = newVal;
+    // }
   };
 
   const effectFn = effect(() => getter(), {
@@ -406,21 +464,54 @@ console.log(
 );
 
 effect(() => {
-// 当读取 child.bar 属性值时，由于
-// child 代理的对象 obj 自身没有 bar 属性，因此会获取对象 obj 的
-// 原型，也就是 parent 对象，所以最终得到的实际上是 parent.bar
-// 的值。但是大家不要忘了，parent 本身也是响应式数据，因此在副作
-// 用函数中访问 parent.bar 的值时，会导致副作用函数被收集，从而
-// 也建立响应联系
+  // #7 当读取 child.bar 属性值时，由于
+  // child 代理的对象 obj 自身没有 bar 属性，因此会获取对象 obj 的
+  // 原型，也就是 parent 对象，所以最终得到的实际上是 parent.bar
+  // 的值。但是大家不要忘了，parent 本身也是响应式数据，因此在副作
+  // 用函数中访问 parent.bar 的值时，会导致副作用函数被收集，从而
+  // 也建立响应联系
   console.log(child.bar);
 });
 
 setTimeout(() => {
-  console.log("====================== setTimeout PLUS ======================");
-  // 如果设置的属性不存在于对象上，那么会取得其
+  console.log(
+    "====================== setTimeout prototype ======================"
+  );
+  // #7 如果设置的属性不存在于对象上，那么会取得其
   // 原型，并调用原型的 [[Set]] 方法，也就是 parent 的 [[Set]] 内
   // 部方法。由于 parent 是代理对象，所以这就相当于执行了它的 set
   // 拦截函数。换句话说，虽然我们操作的是 child.bar，但这也会导致
   // parent 代理对象的 set 拦截函数被执行。
   child.bar = 2;
 }, 100);
+
+const nested = { foo: { bar: 1 } };
+const nested_proxy = reactive(nested);
+const nested1 = { foo: { bar: 1 } };
+const nested1_proxy = shallowReactive(nested1);
+
+effect(() => {
+  console.log(
+    `%c[Log]`,
+    "color: #00ff; font-weight: 1000; font-family: Microsoft YaHei",
+    " ☀『nested_proxy.foo.bar』☀ ",
+    nested_proxy.foo.bar
+  );
+});
+
+effect(() => {
+  console.log(
+    `%c[Log]`,
+    "color: #00ff; font-weight: 1000; font-family: Microsoft YaHei",
+    " ☀『nested1_proxy.foo.bar』☀ ",
+    nested1_proxy.foo.bar
+  );
+});
+
+setTimeout(() => {
+  console.log(
+    "====================== setTimeout nested ======================"
+  );
+  nested_proxy.foo.bar = 2;
+  nested1_proxy.foo.bar = 2;
+}, 200);
