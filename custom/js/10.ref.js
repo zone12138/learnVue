@@ -69,60 +69,6 @@ const effectStack = [];
 const bucket = new WeakMap();
 const ITERATE_KEY = Symbol();
 const RAW_KEY = Symbol();
-const reactiveMap = new Map();
-const arrayInstrumentations = {};
-let shouldTrack = true;
-// #9 重写 Set 的一些方法：根据给定的值返回查找结果的方法
-const mutableInstrumentations = {
-  add(key) {
-    const target = this[RAW_KEY];
-    const hadKey = target.has(key);
-    const res = target.add(key);
-    if (!hadKey) {
-      trigger(target, key, "ADD");
-    }
-    return res;
-  },
-  delete(key) {
-    const target = this[RAW_KEY];
-    const hadKey = target.has(key);
-    const res = target.delete(key);
-    if (hadKey) {
-      trigger(target, key, "DELETE");
-    }
-    return res;
-  },
-};
-
-const instrumentations = {
-  set(key, value) {
-
-  }
-}
-
-// #8 重写数组的一些方法：根据给定的值返回查找结果的方法
-["includes", "indexOf", "lastIndexOf"].forEach((method) => {
-  const originMethod = Array.prototype[method];
-  arrayInstrumentations[method] = function (...args) {
-    let res = originMethod.apply(this, args);
-
-    if (res === false || res === -1) {
-      res = originMethod.apply(this[RAW_KEY], args);
-    }
-    return res;
-  };
-});
-
-// #8 重写数组的一些方法：间接读取 length 属性值的方法 => get push => get length => set index => set length
-["push", "pop", "shift", "unshift", "splice"].forEach((method) => {
-  const originMethod = Array.prototype[method];
-  arrayInstrumentations[method] = function (...args) {
-    shouldTrack = false;
-    let res = originMethod.apply(this, args);
-    shouldTrack = true;
-    return res;
-  };
-});
 
 /**
  * effect
@@ -160,8 +106,7 @@ const effect = (fn, options = {}) => {
  * @returns
  */
 const track = (target, key) => {
-  // #8 当禁止追踪时，直接返回
-  if (!activeEffect || !shouldTrack) return;
+  if (!activeEffect) return;
   let depsMap = bucket.get(target);
   if (!depsMap) bucket.set(target, (depsMap = new Map()));
   let deps = depsMap.get(key);
@@ -175,14 +120,15 @@ const track = (target, key) => {
  * @param {Object} target 目标
  * @param {string} key 键值
  * @param {('SET' | 'ADD' | 'DELETE')} type 类型
- * @param {*} newVal 新值
  * @returns
  */
-const trigger = (target, key, type, newVal) => {
+const trigger = (target, key, type) => {
   const depsMap = bucket.get(target);
   if (!depsMap) return;
   // 取得与 key 相关联的副作用函数
   const effects = depsMap.get(key);
+  // 取得与 ITERATE_KEY 相关联的副作用函数
+  const iterateEffects = depsMap.get(ITERATE_KEY);
   // #1 v3
   // const effectsToRun = new Set(effects);
   // #3
@@ -196,8 +142,6 @@ const trigger = (target, key, type, newVal) => {
     });
   // 只有当操作类型为 'ADD' 或者 'DELETE' (影响for in 循环次数) 时，才触发与 ITERATE_KEY 相关联的副作用函数重新执行
   if (["ADD", "DELETE"].includes(type)) {
-    // 取得与 ITERATE_KEY 相关联的副作用函数
-    const iterateEffects = depsMap.get(ITERATE_KEY);
     // 将与 ITERATE_KEY 相关联的副作用函数也添加到 effectsToRun
     iterateEffects &&
       iterateEffects.forEach((effectFn) => {
@@ -206,32 +150,6 @@ const trigger = (target, key, type, newVal) => {
         }
       });
   }
-  // 当操作类型为 ADD 并且目标对象是数组时，应该取出并执行那些与 length 属性相关联的副作用函数
-  if (type === "ADD" && Array.isArray(target)) {
-    // 取出与 length 相关联的副作用函数
-    const arrayEffects = depsMap.get("length");
-    arrayEffects &&
-      arrayEffects.forEach((effectFn) => {
-        if (effectFn !== activeEffect) {
-          effectsToRun.add(effectFn);
-        }
-      });
-  }
-
-  if (Array.isArray(target) && key === "length") {
-    depsMap.forEach((effects, key) => {
-      // 找到所有索引值大于或等于新的 length 值的元素，然后把与它
-      // 们相关联的副作用函数取出并执行
-      if (key >= newVal) {
-        effects.forEach((effectFn) => {
-          if (effectFn !== activeEffect) {
-            effectsToRun.add(effectFn);
-          }
-        });
-      }
-    });
-  }
-
   effectsToRun.forEach((effectFn) => {
     if (effectFn.options.scheduler) {
       // #4
@@ -267,34 +185,12 @@ const createReactive = (obj, isShallow = false, isReadonly = false) => {
     // - 访问属性 eg: obj.text ===> (get拦截函数)
     // - 判断对象或者原型上是否存在给定的key eg: text in obj ===> (has拦截函数)
     // - 使用for...in循环遍历对象 eg: for(const key in obj) {} ===> (ownKeys拦截函数)
-
-    // 数组元素或属性的所有可能的“读取”操作
-    // - 通过索引访问数组元素值 eg: arr[0]
-    // - 访问数组的长度 eg: arr.length
-    // - 把数组作为对象，使用for...in循环遍历
-    // - 使用for...of迭代遍历数组
-    // - 数组的原型方法，如concat/join/every/some/find/findIndex/includes等，
-    //   以及其他不改变元素组的原型方法
     get(target, key, receiver) {
       if (key === RAW_KEY) {
         return target;
       }
-      // #8
-      if (Array.isArray(target) && arrayInstrumentations.hasOwnProperty(key)) {
-        return Reflect.get(arrayInstrumentations, key, receiver);
-      }
-      if (key === "size") {
-        track(target, ITERATE_KEY);
-        return Reflect.get(target, key, target);
-      }
-
-      if (target instanceof Set) {
-        if (mutableInstrumentations.hasOwnProperty(key)) {
-          return Reflect.get(mutableInstrumentations, key, receiver);
-        }
-      }
-      // #7 只读的不需要收集、 #8 key 的类型是 symbol，不需要收集
-      if (!isReadonly && typeof key !== "symbol") {
+      // #7 只读的不需要收集
+      if (!isReadonly) {
         track(target, key);
       }
       const res = Reflect.get(target, key, receiver);
@@ -312,7 +208,7 @@ const createReactive = (obj, isShallow = false, isReadonly = false) => {
       return Reflect.has(target, key);
     },
     ownKeys(target) {
-      track(target, Array.isArray(target) ? "length" : ITERATE_KEY);
+      track(target, ITERATE_KEY);
       return Reflect.ownKeys(target);
     },
     set(target, key, value, receiver) {
@@ -321,20 +217,14 @@ const createReactive = (obj, isShallow = false, isReadonly = false) => {
         return true;
       }
       const oldVal = target[key];
-      // #8 增加数组判断
-      const type = Array.isArray(target)
-        ? Number(key) < target.length
-          ? "SET"
-          : "ADD"
-        : Object.prototype.hasOwnProperty.call(target, key)
+      const type = Object.prototype.hasOwnProperty.call(target, key)
         ? "SET"
         : "ADD";
       const res = Reflect.set(target, key, value, receiver);
       // #7 解决原型代理重复触发问题
       if (target === receiver[RAW_KEY]) {
-        // 判断新旧值是否相等，且排除新值旧值为NaN的情况
         if (oldVal !== value && (oldVal === oldVal || value === value)) {
-          trigger(target, key, type, value);
+          trigger(target, key, type);
         }
       }
       return res;
@@ -362,11 +252,7 @@ const createReactive = (obj, isShallow = false, isReadonly = false) => {
  * @returns
  */
 const reactive = (obj) => {
-  const existionProxy = reactiveMap.get(obj);
-  if (existionProxy) return existionProxy;
-  const proxy = createReactive(obj);
-  reactiveMap.set(obj, proxy);
-  return proxy;
+  return createReactive(obj);
 };
 
 /**
@@ -376,6 +262,49 @@ const reactive = (obj) => {
  */
 const shallowReactive = (obj) => {
   return createReactive(obj, true);
+};
+
+/**
+ * ref
+ * @param {*} value
+ * @returns
+ */
+const ref = (value) => {
+  const wrapper = {
+    value,
+  };
+  Object.defineProperty(wrapper, "__v_isRef", {
+    value: true,
+  });
+  return reactive(wrapper);
+};
+
+/**
+ * toRef
+ * @param {*} obj
+ * @param {*} key
+ * @returns
+ */
+const toRef = (obj, key) => {
+  const wrapper = {
+    get value() {
+      return obj[key];
+    },
+  };
+  return wrapper;
+};
+
+/**
+ * toRefs
+ * @param {*} obj
+ * @returns
+ */
+const toRefs = (obj) => {
+  const wrapper = {};
+  for (const key in obj) {
+    wrapper[key] = toRef(obj, key);
+  }
+  return wrapper;
 };
 
 /**
@@ -528,30 +457,35 @@ const watch = (source, cb, options = {}) => {
   }
 };
 
-const arr_proxy = reactive(new Set(["foo", "bar"]));
+const val = ref(0);
 
 effect(() => {
   console.log(
     `%c[Log]`,
     "color: #00ff; font-weight: 1000; font-family: Microsoft YaHei",
-    " ☀『arr_proxy.size』☀ ",
-    arr_proxy.size
+    " ☀『val』☀ ",
+    val.value
   );
 });
 
-// arr_proxy.add("111");
-arr_proxy.delete("foo")
+val.value++;
 
-// setTimeout(() => {
-//   console.log("================== setTimeout =======================");
-//   // arr_proxy[0] = "bar";
-//   // 无论是为数组添加新元素，还是直接修改数组的长度，本质上都是因为修改了数组的 length 属性
-//   arr_proxy[100] = "qqq";
-//   console.log(
-//     `%c[Log]`,
-//     "color: #00ff; font-weight: 1000; font-family: Microsoft YaHei",
-//     " ☀『arr_proxy』☀ ",
-//     arr_proxy
-//   );
-//   arr_proxy.length = 0;
-// }, 100);
+const obj = reactive({ text: "ppp" });
+const newObj = { ...toRefs(obj) };
+effect(() => {
+  console.log(
+    `%c[Log]`,
+    "color: #00ff; font-weight: 1000; font-family: Microsoft YaHei",
+    " ☀『newObj.text』☀ ",
+    newObj.text
+  );
+});
+
+console.log(
+  `%c[Log]`,
+  "color: #00ff; font-weight: 1000; font-family: Microsoft YaHei",
+  " ☀『newObj』☀ ",
+  newObj
+);
+
+newObj.text = "aaa"; // 触发副作用函数
