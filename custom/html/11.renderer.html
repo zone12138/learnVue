@@ -1,13 +1,60 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>renderer</title>
-</head>
-<body>
+  </head>
+  <body>
     <div id="app"></div>
+    <p id="p">ABCD</p>
+    <button id="btn">Click</button>
+    <div id="div">
+      <span id="span">123456</span>
+    </div>
     <script src="https://unpkg.com/@vue/reactivity@3.0.5/dist/reactivity.global.js"></script>
     <script src="../js/11.renderer.js"></script>
-</body>
+
+    <script>
+      const p = document.querySelector("#p");
+      const btn = document.querySelector("#btn");
+
+      const invoke = (p._vei = (e) => {
+        invoke.value(e);
+      });
+
+      invoke.value = (e) => {
+        alert("default value");
+      };
+
+      p.addEventListener("click", invoke);
+
+      btn.addEventListener("click", () => {
+        p._vei.value = () => {
+          alert("change" + Math.random());
+        };
+      });
+    </script>
+
+    <script>
+      const div = document.querySelector("#div");
+      const span = document.querySelector("#span");
+
+      const delay = (timeout = 3000) => {
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            console.log("timeout");
+            resolve(true);
+          }, timeout);
+        });
+      };
+
+      span.addEventListener("click", async (e) => {
+        console.log("++++++++++++ span +++++++++++++", e.timeStamp);
+      });
+      div.addEventListener("click", (e) => {
+        console.log("------------- div --------------", performance.now());
+      });
+    </script>
+  </body>
 </html>
