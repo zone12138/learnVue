@@ -1,11 +1,7 @@
 <template>
   <nav>
-    <ElMenu
-      :default-active="activeRoute"
-      mode="horizontal"
-      @select="handleSelect"
-    >
-      <MenuRecursive :routes="routes" />
+    <ElMenu :default-active="activeRoute" mode="horizontal" @select="handleSelect">
+      <MenuRecursive :routes="routes as RouteRecordRaw[]" />
     </ElMenu>
   </nav>
   <main>
@@ -19,7 +15,7 @@
 
 <script lang="ts" setup>
 import { useRouter, type RouteRecordRaw } from "vue-router";
-import { ref } from "vue";
+import { defineComponent, h, ref } from "vue";
 import { ElMenu, ElMenuItem, ElSubMenu } from 'element-plus'
 
 const router = useRouter();
@@ -31,43 +27,40 @@ const handleSelect = (index: string) => {
   activeRoute.value = index;
 };
 
-// 假设这些导入路径是正确的，根据实际情况调整
-import { ElSubMenu, ElMenuItem } from 'element-plus'
-import type { RouteRecordRaw } from 'vue-router'
-
-const MenuRecursive = { 
-  props: { 
-    routes: { 
-      type: Array as () => RouteRecordRaw[], 
-      required: true 
-    } 
-  }, 
-  setup(props: { routes: RouteRecordRaw[] }) { 
-    return () => ( 
-      props.routes.map(route => { 
-        if (route.children && route.children.length) { 
-          return ( 
-            <ElSubMenu index={route.path}> 
-              <template #title>{route.path.slice(1) || '首页'}</template> 
-              <MenuRecursive routes={route.children} /> 
-            </ElSubMenu> 
-          ); 
-        } 
-        return ( 
-          <ElMenuItem index={route.path}> 
-            {route.path.slice(1) || '首页'} 
-          </ElMenuItem> 
-        ); 
-      }) 
-    ); 
-  } 
-};
+const MenuRecursive = defineComponent({
+  props: {
+    routes: {
+      type: Array as () => RouteRecordRaw[],
+      required: true
+    }
+  },
+  setup(props: { routes: RouteRecordRaw[] }) {
+    // 修改返回值类型为 JSX.Element[] 
+    return (): any[] => (
+      props.routes.map(route => {
+        if (route.children && route.children.length) {
+          return h(ElSubMenu, {
+            index: route.path
+          }, {
+            default: () => h(MenuRecursive, {
+              routes: route.children!
+            }),
+            title:() => route.path.slice(1)
+          });
+        }
+        return h(ElMenuItem, {
+          index: route.path
+        }, {
+          default: () => route.path.slice(1) || '首页'
+        })
+      })
+    );
+  }
+});
 </script>
 
 <style lang="scss" scoped>
-nav {
-
-}
+nav {}
 
 .router-name {
   padding: 0 10px;
