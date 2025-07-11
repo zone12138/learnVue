@@ -4,3 +4,5 @@ declare module '*.vue' {
   const component: DefineComponent<{}, {}, any>
   export default component
 }
+
+// No need to declare defineProps here; use <script setup> in your .vue files.

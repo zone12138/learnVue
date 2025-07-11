@@ -7,16 +7,10 @@
  * @Description: main 入口文件
  */
 import { createApp } from "vue";
-
 import App from "./App.vue";
-import "element-plus/dist/index.css";
 import router from "./router";
 
-const app = createApp(App, {
-  abc: () => {
-    console.log("abc");
-  },
-});
+const app = createApp(App);
 
 // vue3 定义全局方法
 app.config.globalProperties.$filters = {
@@ -25,7 +19,5 @@ app.config.globalProperties.$filters = {
     return date.toLocaleDateString();
   },
 };
-
-console.log(app);
 
 app.use(router).mount("#app");

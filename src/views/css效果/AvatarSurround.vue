@@ -21,7 +21,7 @@
 </template>
 
 <script lang="ts" setup>
-import { useImage } from "../hook/useImage";
+import { useImage } from "@/hook/useImage";
 import { ref } from "vue";
 const { getImage } = useImage();
 const count = ref(5);

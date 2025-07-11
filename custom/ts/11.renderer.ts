@@ -166,7 +166,7 @@ const unmount = (vnode: VNodeChild) => {
  * @param container 容器
  * @param anchor 锚点元素（el会插入到锚点元素前面，如果锚点元素为null，el会被插入到container中的尾部）
  */
-const mountElement = (vnode: VNode, container: Element, anchor) => {
+const mountElement = (vnode: VNode, container: Element, anchor:ChildNode | null) => {
   // 创建 DOM 元素
   const el = document.createElement(vnode.type);
   // 处理子节点，如果子节点是字符串，代表元素具有文本节点

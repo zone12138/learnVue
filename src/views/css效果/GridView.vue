@@ -15,7 +15,7 @@
 </template>
 
 <script lang="ts" setup>
-import { useImage } from "../hook/useImage";
+import { useImage } from "@/hook/useImage";
 const { getImage } = useImage();
 </script>
 

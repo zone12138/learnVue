@@ -24,7 +24,7 @@ import {
   onDeactivated,
   onBeforeUnmount,
 } from "vue";
-import { useImage } from "../hook/useImage";
+import { useImage } from "@/hook/useImage";
 const { getRandomImage } = useImage();
 const imgContainer = ref<HTMLDivElement>();
 const image = ref<HTMLImageElement>();
