@@ -13,13 +13,17 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { ref, onMounted, onBeforeUnmount, defineOptions } from "vue";
 const text = ref("Text Follow");
 const container = ref<HTMLDivElement>();
 const label = ref<HTMLSpanElement[]>([]);
 const textLeft = ref("50%");
 const textTop = ref("50%");
 let textCount = ref(6);
+
+defineOptions({
+  name: '文字跟随'
+})
 
 onMounted(() => {
   container.value?.addEventListener("mousemove", handleMousemove);

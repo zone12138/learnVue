@@ -15,8 +15,13 @@
 </template>
 
 <script lang="ts" setup>
+import { defineOptions } from 'vue'
 import { useImage } from "@/hook/useImage";
 const { getImage } = useImage();
+
+defineOptions({
+  name: 'Grid渐进式展示图片'
+})
 </script>
 
 <style lang="scss" scoped>

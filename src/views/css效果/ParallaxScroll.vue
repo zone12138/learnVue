@@ -19,7 +19,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref } from "vue";
+import { ref, defineOptions } from "vue";
 import { useImage } from "@/hook/useImage";
 const { getImage } = useImage();
 const count = ref(8);
@@ -36,6 +36,11 @@ const textArr = ref([
   "行路难，行路难，多歧路，今安在？",
   "生活不止眼前的苟且，还有诗和远方",
 ]);
+
+defineOptions({
+  name: '视差滚动'
+})
+
 </script>
 
 <style lang="scss" scoped>

@@ -19,6 +19,7 @@ import {
   onActivated,
   onDeactivated,
   onBeforeUnmount,
+  defineOptions
 } from "vue";
 const canvasContainer = ref<HTMLDivElement>();
 const canvas = ref<HTMLCanvasElement>();
@@ -27,6 +28,10 @@ const fontSize = 14 * devicePixelRatio;
 let column: number;
 let charIndex: Array<number>;
 let timer: number;
+
+defineOptions({
+  name: '文字雨'
+})
 
 onMounted(() => {
   console.log("onMounted");

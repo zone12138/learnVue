@@ -7,8 +7,12 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, ref } from "vue";
+import { onMounted, ref, defineOptions } from "vue";
 const nineGrid = ref<HTMLDivElement>();
+
+defineOptions({
+  name: "九宫格"
+})
 
 onMounted(() => {
   handleSetPosition();
@@ -46,7 +50,7 @@ const handleSetPosition = () => {
     grid-template-rows: repeat(3, 100px);
 
     &-item {
-      background: url("../assets/九宫格.jpeg");
+      background: url("@/assets/九宫格.jpeg");
       background-size: 300px 300px; // 背景图片大小
       background-position: var(--bgposX, 0) var(--bgposY, 0);
       transform: translate(var(--x, 0), var(--y, 0));

@@ -22,12 +22,14 @@
 
 <script lang="ts" setup>
 import { useImage } from "@/hook/useImage";
-import { ref } from "vue";
+import { ref, defineOptions } from "vue";
 const { getImage } = useImage();
 const count = ref(5);
 const imageData = getImage(count.value);
 
-console.log(imageData);
+defineOptions({
+  name: '头像图片环绕'
+})
 </script>
 
 <style lang="scss" scoped>

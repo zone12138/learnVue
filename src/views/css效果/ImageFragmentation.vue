@@ -19,12 +19,16 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, ref } from "vue";
+import { onMounted, ref, defineOptions } from "vue";
 const row = ref(16);
 const col = ref(16);
 const boxWidth = ref("0px");
 const boxHeight = ref("0px");
 const container = ref<HTMLDivElement>();
+
+defineOptions({
+  name: "图片碎片化"
+})
 
 onMounted(async () => {
   console.log("result");
@@ -105,7 +109,7 @@ const createSmallBox = () => {
       // 块的大小是整数时才不会出现白边
       height: v-bind(boxHeight);
       width: v-bind(boxWidth);
-      background: url("../assets/九宫格.jpeg");
+      background: url("@/assets/九宫格.jpeg");
       background-repeat: no-repeat;
       background-size: 512px 512px;
       opacity: 0;

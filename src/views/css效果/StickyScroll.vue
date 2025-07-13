@@ -7,8 +7,13 @@
 </template>
 
 <script lang="ts" setup>
+import { defineOptions } from "vue";
 import { useImage } from "@/hook/useImage";
 const { allImage } = useImage();
+
+defineOptions({
+  name: '粘性滚动'
+})
 </script>
 
 <style lang="scss" scoped>

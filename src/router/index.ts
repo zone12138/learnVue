@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router";
 // 添加类型声明以解决类型缺失问题
-import path from "path-browserify";
+import { basename } from "path-browserify";
 const routes: Array<RouteRecordRaw> = [];
 
 // 此错误通常是 TypeScript 类型定义缺失导致，可通过安装 @vitejs/plugin-vue 相关类型定义解决
@@ -13,32 +13,58 @@ const routes: Array<RouteRecordRaw> = [];
 // };
 // 为保持与原功能一致，这里添加 @ts-ignore 注释跳过类型检查
 // @ts-ignore
-const routerCollection = import.meta.glob("../views/**/*.vue", {eager: true});
+const routerCollection = import.meta.glob("../views/**/*.vue", { eager: true });
+
+console.log(routerCollection)
+
+
+const routerMap = new Map()
 
 for (const key in routerCollection) {
   const component = routerCollection[key].default;
-  const name = path.basename(key, ".vue");
-  const floder = key.split("/")[2]
-  const hasRoute = routes.find(v => v.path === `/${floder}`)
-  if (hasRoute) {
-    hasRoute?.children?.push({
-      path: `${name}`,
-      name: name,
-      component: component,
-    })
-  } else {
+  const path = basename(key, ".vue")
+  const name = component.name ?? path;
+  const floderList = key.replace('../views/', '').split("/").filter(v => v.indexOf('.vue') == -1);
+  if (floderList.length === 0) {
     routes.push({
-      path: `/${floder}`,
-      children: [
-        {
-          path: `${name}`,
-          name: name,
-          component: component,
-        }
-      ]
-    });
+      path: `/${path}`,
+      name,
+      component,
+    })
+    console.log(name, component)
+  } else {
+    let parentPath = '', len = 0, lastParentPath = ''
+    while (len < floderList.length) {
+      let lastParent, lastParentChildren
+      if (lastParentPath) lastParent = routerMap.get(lastParentPath)
+      parentPath += `/${floderList[len]}`
+      const parentRoute = routerMap.get(parentPath)
+      lastParentChildren = lastParent ?? routes
+      if (!parentRoute) {
+        lastParentChildren.push({
+          path: `${len == 0 ? '/' : ''}${floderList[len]}`,
+          children: []
+        })
+        routerMap.set(parentPath, lastParentChildren.at(-1).children)
+      }
+
+      if (len === floderList.length - 1) {
+        const children = routerMap.get(parentPath)
+        console.log("floder", name, component)
+        children.push({
+          path,
+          name,
+          component,
+        })
+      }
+
+      lastParentPath = parentPath
+      len++;
+    }
   }
 }
+
+console.log(routes)
 
 const router = createRouter({
   history: createWebHistory('/'),

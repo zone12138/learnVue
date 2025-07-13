@@ -10,7 +10,14 @@
   <div class="mix-blend-mode"></div>
 </template>
 
-<script lang="ts" setup></script>
+<script lang="ts" setup>
+import { defineOptions } from 'vue'
+
+defineOptions({
+  name: '混合模式'
+})
+
+</script>
 
 <style lang="scss" scoped>
 @keyframes move {

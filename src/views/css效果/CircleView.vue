@@ -4,7 +4,12 @@
   </div>
 </template>
 
-<script lang="ts" setup></script>
+<script lang="ts" setup>
+import {defineOptions} from 'vue'
+defineOptions({
+  name: "头像悬浮效果"
+})
+</script>
 
 <style lang="scss" scoped>
 .circle-view {
@@ -18,7 +23,7 @@
     height: 120px;
     width: 120px;
     border-radius: 50%;
-    background: url("../assets/九宫格.jpeg") center center;
+    background: url("@/assets/九宫格.jpeg") center center;
     background-size: contain;
     position: relative;
 

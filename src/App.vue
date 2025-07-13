@@ -15,7 +15,7 @@
 
 <script lang="ts" setup>
 import { useRouter, type RouteRecordRaw } from "vue-router";
-import { defineComponent, h, ref } from "vue";
+import { defineComponent, h, ref, type VNode } from "vue";
 import { ElMenu, ElMenuItem, ElSubMenu } from 'element-plus'
 
 const router = useRouter();
@@ -32,26 +32,31 @@ const MenuRecursive = defineComponent({
     routes: {
       type: Array as () => RouteRecordRaw[],
       required: true
+    },
+    parentPath: {
+      type: String,
+      default: ''
     }
   },
-  setup(props: { routes: RouteRecordRaw[] }) {
-    // 修改返回值类型为 JSX.Element[] 
-    return (): any[] => (
+  // setup 如果返回是function时，则取代render（即render会不触发）
+  setup(props: { routes: RouteRecordRaw[], parentPath: string }) {
+    return (): VNode[] => (
       props.routes.map(route => {
-        if (route.children && route.children.length) {
+        if (Array.isArray(route.children) && route.children.length) {
           return h(ElSubMenu, {
-            index: route.path
+            index: route.path,
           }, {
             default: () => h(MenuRecursive, {
-              routes: route.children!
+              routes: route.children!,
+              parentPath: props.parentPath + route.path + "/"
             }),
-            title:() => route.path.slice(1)
+            title: () => route.path.replace("/", "")
           });
         }
         return h(ElMenuItem, {
-          index: route.path
+          index: props.parentPath + route.path
         }, {
-          default: () => route.path.slice(1) || '首页'
+          default: () => route.name || '未命名菜单'
         })
       })
     );

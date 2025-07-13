@@ -12,11 +12,15 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, defineOptions } from "vue";
 import { getRandomColorArrayWithoutRepeat } from "@/lib/color";
 const count = ref(120);
 const colorArr = getRandomColorArrayWithoutRepeat(count.value);
 const container = ref<HTMLDivElement>();
+
+defineOptions({
+  name: '滚动绽放'
+})
 
 onMounted(() => {
   handleObserver();

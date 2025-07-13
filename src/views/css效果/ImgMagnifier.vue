@@ -23,6 +23,7 @@ import {
   onActivated,
   onDeactivated,
   onBeforeUnmount,
+  defineOptions
 } from "vue";
 import { useImage } from "@/hook/useImage";
 const { getRandomImage } = useImage();
@@ -36,6 +37,10 @@ let areaLeft = ref("0px");
 let areaTop = ref("0px");
 const areaSize = ref("100px");
 let areaBgColor = ref("rgba(255, 255, 255, 0.2)");
+
+defineOptions({
+  name: "图片放大器"
+})
 
 onMounted(() => {
   console.log("onMounted");
@@ -150,7 +155,7 @@ const calcBounds = (
     height: 300px;
     width: 300px;
 
-    > img {
+    >img {
       height: 100%;
       width: 100%;
     }
@@ -167,6 +172,7 @@ const calcBounds = (
       cursor: grab;
     }
   }
+
   canvas {
     margin-left: 8px;
     border: 1px solid #ccc;
