@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router";
-// 添加类型声明以解决类型缺失问题
 import { basename } from "path-browserify";
 const routes: Array<RouteRecordRaw> = [];
 
@@ -14,25 +13,19 @@ const routes: Array<RouteRecordRaw> = [];
 // 为保持与原功能一致，这里添加 @ts-ignore 注释跳过类型检查
 // @ts-ignore
 const routerCollection = import.meta.glob("../views/**/*.vue", { eager: true });
+const routerMap = new Map() // 存储目录下（route）的children
 
-console.log(routerCollection)
-
-
-const routerMap = new Map()
-
+// 遍历views文件夹生成动态routes
 for (const key in routerCollection) {
   const component = routerCollection[key].default;
-  const path = basename(key, ".vue")
-  const name = component.name ?? path;
-  const floderList = key.replace('../views/', '').split("/").filter(v => v.indexOf('.vue') == -1);
+  const path = basename(key, ".vue") // 获取vue文件名（用作路径的一部分）
+  const name = component.name ?? path; // 获取名称（用作route的name属性）
+  const floderList = key.replace('../views/', '').split("/").filter(v => v.indexOf('.vue') == -1); // 获取包含有多少级目录
   if (floderList.length === 0) {
-    routes.push({
-      path: `/${path}`,
-      name,
-      component,
-    })
-    console.log(name, component)
+    // 没有目录时，直接插入route信息
+    routes.push({ path: `/${path}`, name, component, })
   } else {
+    // 有目录时，遍历目录生成route的children字段，并手动存储起来，避免重复生成同一个route的children
     let parentPath = '', len = 0, lastParentPath = ''
     while (len < floderList.length) {
       let lastParent, lastParentChildren
@@ -50,15 +43,10 @@ for (const key in routerCollection) {
 
       if (len === floderList.length - 1) {
         const children = routerMap.get(parentPath)
-        console.log("floder", name, component)
-        children.push({
-          path,
-          name,
-          component,
-        })
+        children.push({ path: `${len == 0 ? '/' : ''}${path}`, name, component, })
       }
 
-      lastParentPath = parentPath
+      lastParentPath = parentPath // 存储上一次的路径，用于获取上一次的children
       len++;
     }
   }
