@@ -15,7 +15,7 @@
 
 <script lang="ts" setup>
 import { useRouter, type RouteRecordRaw } from "vue-router";
-import { defineComponent, h, ref, type VNode } from "vue";
+import { h, ref, type VNode } from "vue";
 import { ElMenu, ElMenuItem, ElSubMenu } from 'element-plus'
 
 const router = useRouter();
@@ -27,7 +27,7 @@ const handleSelect = (index: string) => {
   activeRoute.value = index;
 };
 
-const MenuRecursive = defineComponent({
+const MenuRecursive = {
   props: {
     routes: {
       type: Array as () => RouteRecordRaw[],
@@ -61,7 +61,7 @@ const MenuRecursive = defineComponent({
       })
     );
   }
-});
+};
 </script>
 
 <style lang="scss" scoped>
