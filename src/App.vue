@@ -14,18 +14,27 @@
 </template>
 
 <script lang="ts" setup>
-import { useRouter, type RouteRecordRaw } from "vue-router";
-import { h, ref, type VNode } from "vue";
+import { useRouter, useRoute, type RouteRecordRaw } from "vue-router";
+import { h, ref, watch, type VNode } from "vue";
 import { ElMenu, ElMenuItem, ElSubMenu } from 'element-plus'
 
 const router = useRouter();
 const routes = router.options.routes;
+const route = useRoute();
 const activeRoute = ref(router.currentRoute.value.path);
 
 const handleSelect = (index: string) => {
-  router.push(index);
-  activeRoute.value = index;
+  activeRoute.value = index
+  router.push(index)
 };
+
+watch(() => route.path, (newVal) => {
+  const newPath = decodeURIComponent(newVal); // 解决路由参数中包含特殊字符的问题
+  // 避免重复触发
+  if (newPath !== activeRoute.value) {
+    handleSelect(newPath)
+  }
+});
 
 const MenuRecursive = {
   props: {

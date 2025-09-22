@@ -6,11 +6,13 @@
  * @FilePath: \vue3-project\src\main.ts
  * @Description: main 入口文件
  */
-import { createApp } from "vue";
+import { createApp, h } from "vue";
+import type { VNodeProps, SlotsType} from 'vue'
 
 import App from "./App.vue";
 import "element-plus/dist/index.css";
 import router from "./router";
+import { ElTable, ElTableColumn } from "element-plus";
 
 const app = createApp(App, {
   abc: () => {

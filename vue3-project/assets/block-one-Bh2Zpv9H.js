@@ -1,0 +1,1 @@
+import{_ as n}from"./index-BOcZhAdZ.js";const o={};function t(r,e){return Vue.openBlock(),Vue.createElementBlock("div",null,e[0]||(e[0]=[Vue.createElementVNode("h1",null,"block-one",-1)]))}const l=n(o,[["render",t]]);export{l as default};

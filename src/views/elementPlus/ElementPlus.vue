@@ -36,6 +36,10 @@
     <UseTemplate :h1="123" :h2="456"></UseTemplate>
     <UseTemplate h1="ABC" h2="DEF"></UseTemplate>
     <UseTemplate h1="Hello" h2="World"></UseTemplate>
+
+    <el-table :data="Array(10).fill({address: 2121212})">
+      <el-table-column label="地址" prop="address"></el-table-column>
+    </el-table>
   </div>
 </template>
 
@@ -45,7 +49,7 @@ import {
   h,
   watch,
 } from "vue";
-import { ElInput } from 'element-plus'
+import { ElInput, ElTableColumn } from 'element-plus'
 
 import { useReusableTemplate } from "@/hook/useReusableTemplate";
 const [DefaultTemplate, UseTemplate] = useReusableTemplate();

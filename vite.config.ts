@@ -23,10 +23,10 @@ export default defineConfig(({ mode }) => {
                 {
                     name: 'element-plus',
                     var: 'ElementPlus',
-                    path: 'https://unpkg.com/element-plus@2.10.2/dist/index.esm.js',
+                    path: 'https://unpkg.com/element-plus@2.10.4/dist/index.full.js',
                 },
-            ].filter(Boolean),
-        })],
+            ],
+        })].filter(Boolean),
         resolve: {
             alias: {
                 '@': resolve(__dirname, 'src'),

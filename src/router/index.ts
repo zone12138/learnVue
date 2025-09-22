@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router";
+import { createRouter, createWebHashHistory, type RouteRecordRaw } from "vue-router";
 import { basename } from "path-browserify";
 const routes: RouteRecordRaw[] = [];
 
@@ -48,7 +48,7 @@ for (const key in routerCollection) {
 // console.log(routes)
 
 const router = createRouter({
-  history: createWebHistory('/'),
+  history: createWebHashHistory('/'),
   routes,
 });
 
