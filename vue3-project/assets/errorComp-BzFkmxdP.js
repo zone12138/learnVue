@@ -1,1 +1,0 @@
-import{_ as r}from"./index-BOcZhAdZ.js";const o={};function t(n,e){return Vue.openBlock(),Vue.createElementBlock("div",null,e[0]||(e[0]=[Vue.createElementVNode("h1",null,"error",-1)]))}const l=r(o,[["render",t],["__scopeId","data-v-d1f9c855"]]);export{l as default};
