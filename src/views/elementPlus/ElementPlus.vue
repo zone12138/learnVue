@@ -1,21 +1,7 @@
-<!--
- * @Author: xie 1459547902@qq.com
- * @Date: 2025-06-16 13:32:32
- * @LastEditors: xie 1459547902@qq.com
- * @LastEditTime: 2025-07-11 12:18:50
- * @FilePath: \vue3-project\src\views\ElementPlus.vue
- * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
--->
-<!--
- * @Author: xie 1459547902@qq.com
- * @Date: 2025-06-16 13:32:32
- * @LastEditors: xie 1459547902@qq.com
- * @LastEditTime: 2025-07-11 10:22:02
- * @FilePath: \vue3-project\src\views\ElementPlus.vue
- * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
--->
 <template>
   <div>
+    <HelloWorld v-model="value"></HelloWorld>
+    <datePicker v-model="value"></datePicker>
     <el-input v-model="firstName" size="small" clearable></el-input>
     <el-input v-model="lastName" size="small" clearable></el-input>
 
@@ -49,11 +35,11 @@ import {
   h,
   watch,
 } from "vue";
-import { ElInput, ElTableColumn } from 'element-plus'
+import { ElInput } from 'element-plus'
 
 import { useReusableTemplate } from "@/hook/useReusableTemplate";
 const [DefaultTemplate, UseTemplate] = useReusableTemplate();
-
+const value = ref("2024-01-01 12:12:12")
 const A = {
   name: "AComp",
   setup() {
