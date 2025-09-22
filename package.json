@@ -10,9 +10,10 @@
     "lint": "eslint --ext .ts,.tsx,.vue src"
   },
   "dependencies": {
-    "core-js": "^3.8.3",
-    "element-plus": "^2.10.2",
-    "path-browserify": "^1.0.1",
+    "@element-plus/icons-vue": "^2.3.2",
+    "core-js": "3.45.1",
+    "element-plus": "2.11.3",
+    "path-browserify": "1.0.1",
     "vite": "^5.0.0",
     "vue": "^3.5.0",
     "vue-router": "^4.0.3"
@@ -32,6 +33,9 @@
     "sass": "^1.77.6",
     "sass-loader": "^14.2.1",
     "typescript": "~4.5.5",
+    "unplugin-auto-import": "^20.1.0",
+    "unplugin-icons": "^22.3.0",
+    "unplugin-vue-components": "^29.1.0",
     "vite-plugin-cdn-import": "^1.0.1"
   }
 }

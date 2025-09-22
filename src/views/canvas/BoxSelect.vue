@@ -1,8 +1,12 @@
 <template>
   <div class="box-select">
-    <ElButton @click="handleSelectBox">选择框</ElButton>
-    <ElButton @click="handleCancelSelectBox">取消选择</ElButton>
-    <ElButton @click="handleClearAll">清除所有</ElButton>
+    <div class="box-select-btn">
+      <ElColorPicker v-model="selectedColor" />
+      <ElButton @click="handleSelectBox">选择框</ElButton>
+      <ElButton @click="handleSelectCircle">选择圆</ElButton>
+      <ElButton @click="handleCancelSelectBox">取消选择</ElButton>
+      <ElButton @click="handleClearAll">清除所有</ElButton>
+    </div>
     <canvas
       width="1200"
       height="600"
@@ -15,21 +19,31 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
 import { ElButton } from "element-plus";
+import { onMounted, ref } from "vue";
+
+type SelectType = 'rect' | 'circle';
 
 interface Box {
+  type: SelectType;
   startX: number;
   startY: number;
   width: number;
   height: number;
   color: string;
 }
+// 所有选择框
 const boxes = ref<Box[]>([]);
-
+// canvas 元素
 const canvasRef = ref<HTMLCanvasElement>();
+// canvas 上下文
 let ctx: CanvasRenderingContext2D | null = null;
+// 鼠标指针样式
 const cursorVal = ref('default');
+// 选中的颜色
+const selectedColor = ref('#ff0000');
+// 选中的类型
+const selectType = ref('rect');
 
 onMounted(() => {
   ctx = canvasRef.value?.getContext("2d") ?? null;
@@ -41,6 +55,16 @@ onMounted(() => {
 const handleSelectBox = () => {
   if (!ctx) return;
   cursorVal.value = 'crosshair';
+  selectType.value = 'rect';
+};
+
+/**
+ * 选择圆
+ */
+const handleSelectCircle = () => {
+  if (!ctx) return;
+  cursorVal.value = 'crosshair';
+  selectType.value = 'circle';
 };
 
 /**
@@ -103,7 +127,7 @@ const handleMouseMove = (e: MouseEvent) => {
   const height = offsetY - startY;
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   drawAllBoxes();
-  ctx.strokeStyle = 'red';
+  ctx.strokeStyle = selectedColor.value;
   ctx.strokeRect(startX, startY, width, height);
 };
 
@@ -113,14 +137,16 @@ const handleMouseMove = (e: MouseEvent) => {
  */
 const handleMouseUp = (e: MouseEvent) => {
   if (!ctx) return;
+  if (cursorVal.value !== 'crosshair') return;
   const { offsetX, offsetY } = e;
   const { x: startX, y: startY } = selectBoxStartPoint.value ?? { x: 0, y: 0 };
   boxes.value.push({
+    type: selectType.value as SelectType,
     startX,
     startY,
     width: offsetX - startX,
     height: offsetY - startY,
-    color: 'red',
+    color: selectedColor.value,
   });
   mouseIsDown.value = false;
   selectBoxStartPoint.value = null;
@@ -131,6 +157,16 @@ const handleMouseUp = (e: MouseEvent) => {
 .box-select {
   width: 100%;
   height: 100%;
+
+  .box-select-btn {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 10px;
+
+    .el-button {
+      margin: 0;
+    }
+  }
 
   canvas {
     background-color: black;

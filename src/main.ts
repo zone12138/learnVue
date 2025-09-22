@@ -7,12 +7,10 @@
  * @Description: main 入口文件
  */
 import { createApp, h } from "vue";
-import type { VNodeProps, SlotsType} from 'vue'
 
 import App from "./App.vue";
 import "element-plus/dist/index.css";
 import router from "./router";
-import { ElTable, ElTableColumn } from "element-plus";
 
 const app = createApp(App, {
   abc: () => {
@@ -28,6 +26,5 @@ app.config.globalProperties.$filters = {
   },
 };
 
-console.log(app);
 
 app.use(router).mount("#app");
