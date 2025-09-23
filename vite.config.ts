@@ -66,6 +66,8 @@ export default defineConfig(({ mode }) => {
       assetsDir: "assets",
     },
     optimizeDeps: {
+      // add this line for fixed the warning: (!) Could not auto-determine entry point from rollupOptions or html files and there are no explicit optimize Deps.include patterns. Skipping dependency pre-bundling.
+      entries: [], 
       esbuildOptions: {
         target: "es2020",
       },

@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host",
     "serve": "vite",
     "build": "vite build",
     "lint": "eslint --ext .ts,.tsx,.vue src"
@@ -13,12 +13,14 @@
     "@element-plus/icons-vue": "^2.3.2",
     "core-js": "3.45.1",
     "element-plus": "2.11.3",
+    "lodash-es": "^4.17.21",
     "path-browserify": "1.0.1",
     "vite": "^5.0.0",
     "vue": "^3.5.0",
     "vue-router": "^4.0.3"
   },
   "devDependencies": {
+    "@types/lodash-es": "^4.17.12",
     "@types/node": "^20.14.9",
     "@typescript-eslint/eslint-plugin": "^5.4.0",
     "@typescript-eslint/parser": "^5.4.0",

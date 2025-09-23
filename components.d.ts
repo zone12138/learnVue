@@ -12,6 +12,8 @@ declare module 'vue' {
     DatePicker: typeof import('./src/components/datePicker/index.vue')['default']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElColorPicker: typeof import('element-plus/es')['ElColorPicker']
+    ElIcon: typeof import('element-plus/es')['ElIcon']
+    ElOption: typeof import('element-plus/es')['ElOption']
     ElTable: typeof import('element-plus/es')['ElTable']
     ElTableColumn: typeof import('element-plus/es')['ElTableColumn']
     ErrorComp: typeof import('./src/components/asyncComponents/errorComp.vue')['default']
