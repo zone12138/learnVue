@@ -11,6 +11,9 @@ importers:
       '@element-plus/icons-vue':
         specifier: ^2.3.2
         version: 2.3.2(vue@3.5.21(typescript@4.5.5))
+      '@iconify/vue':
+        specifier: ^5.0.0
+        version: 5.0.0(vue@3.5.21(typescript@4.5.5))
       core-js:
         specifier: 3.45.1
         version: 3.45.1
@@ -33,6 +36,9 @@ importers:
         specifier: ^4.0.3
         version: 4.5.1(vue@3.5.21(typescript@4.5.5))
     devDependencies:
+      '@iconify/json':
+        specifier: ^2.2.387
+        version: 2.2.387
       '@types/lodash-es':
         specifier: ^4.17.12
         version: 4.17.12
@@ -402,11 +408,19 @@ packages:
     resolution: {integrity: sha512-ZnQMnLV4e7hDlUvw8H+U8ASL02SS2Gn6+9Ac3wGGLIe7+je2AeAOxPY+izIPJDfFDb7eDjev0Us8MO1iFRN8hA==}
     deprecated: Use @eslint/object-schema instead
 
+  '@iconify/json@2.2.387':
+    resolution: {integrity: sha512-R1PTcM799jGSqHNfzggGqEQA+bQry/X/ckoISJIMKZdC9cz4pYWrWZsRGU50DmYkqTcC9aBQcSLOZxBFHTVT3Q==}
+
   '@iconify/types@2.0.0':
     resolution: {integrity: sha512-+wluvCrRhXrhyOmRDJ3q8mux9JkKy5SJ/v8ol2tu4FVjyYvtEzkc/3pK15ET6RKg4b4w4BmTk1+gsCUhf21Ykg==}
 
   '@iconify/utils@3.0.2':
     resolution: {integrity: sha512-EfJS0rLfVuRuJRn4psJHtK2A9TqVnkxPpHY6lYHiB9+8eSuudsxbwMiavocG45ujOo6FJ+CIRlRnlOGinzkaGQ==}
+
+  '@iconify/vue@5.0.0':
+    resolution: {integrity: sha512-C+KuEWIF5nSBrobFJhT//JS87OZ++QDORB6f2q2Wm6fl2mueSTpFBeBsveK0KW9hWiZ4mNiPjsh6Zs4jjdROSg==}
+    peerDependencies:
+      vue: '>=3'
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -1449,6 +1463,9 @@ packages:
     resolution: {integrity: sha512-gDKb8aZMDeD/tZWs9P6+q0J9Mwkdl6xMV8TjnGP3qJVJ06bdMgkbBlLU8IdfOsIsFz2BW1rNVT3XuNEl8zPAvw==}
     engines: {node: '>=8'}
 
+  pathe@1.1.2:
+    resolution: {integrity: sha512-whLdWMYL2TwI08hn8/ZqAbrVemu0LNaNNJZX73O6qaIdCTfXutsLhMkjdENX0qhsQ9uIimo4/aQOmXkoon2nDQ==}
+
   pathe@2.0.3:
     resolution: {integrity: sha512-WUjGcAqP1gQacoQe+OBJsFA7Ld4DyXuUIjZ5cc75cLHvJ7dtNsTugphxIADwspS+AraAUePCKrSVtPLFj/F88w==}
 
@@ -2151,6 +2168,11 @@ snapshots:
 
   '@humanwhocodes/object-schema@1.2.1': {}
 
+  '@iconify/json@2.2.387':
+    dependencies:
+      '@iconify/types': 2.0.0
+      pathe: 1.1.2
+
   '@iconify/types@2.0.0': {}
 
   '@iconify/utils@3.0.2':
@@ -2165,6 +2187,11 @@ snapshots:
       mlly: 1.8.0
     transitivePeerDependencies:
       - supports-color
+
+  '@iconify/vue@5.0.0(vue@3.5.21(typescript@4.5.5))':
+    dependencies:
+      '@iconify/types': 2.0.0
+      vue: 3.5.21(typescript@4.5.5)
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
@@ -3203,6 +3230,8 @@ snapshots:
   path-key@3.1.1: {}
 
   path-type@4.0.0: {}
+
+  pathe@1.1.2: {}
 
   pathe@2.0.3: {}
 

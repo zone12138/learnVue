@@ -10,13 +10,30 @@
           :value="item.value"
         />
       </ElSelect>
-      <ElButton type="primary" @click="handleDraw">开始绘制</ElButton>
-      <ElButton type="warning" @click="handleCancelDraw">取消绘制</ElButton>
-      <ElButton type="danger" @click="handleClearAll">清除所有</ElButton>
-      <ElButton type="info" title="前进" @click="handleForward">
+      <ElButton
+        type="primary"
+        :disabled="cursorVal !== 'default'"
+        @click="handleDraw"
+      >
+        <Icon icon="fluent:pen-28-regular" />
+        开始绘制
+      </ElButton>
+      <ElButton
+        type="warning"
+        :disabled="cursorVal === 'default'"
+        @click="handleCancelDraw"
+      >
+        <Icon icon="fluent:pen-prohibited-28-regular" />
+        取消绘制
+      </ElButton>
+      <ElButton type="danger" @click="handleClearAll">
+        <Icon icon="fluent:pen-sync-28-regular" />
+        清除所有
+      </ElButton>
+      <ElButton type="info" circle title="前进" @click="handleForward">
         <el-icon><DArrowLeft /></el-icon>
       </ElButton>
-      <ElButton type="info" title="后退" @click="handleBackward">
+      <ElButton type="info" circle title="后退" @click="handleBackward">
         <el-icon><DArrowRight /></el-icon>
       </ElButton>
     </div>
@@ -32,16 +49,15 @@
 </template>
 
 <script setup lang="ts">
-import { ElSelect } from "element-plus";
-import { ElButton } from "element-plus";
-import { onMounted, ref, shallowReactive } from "vue";
+import { onMounted, ref } from "vue";
 
 import { DArrowLeft, DArrowRight } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
 import { cloneDeep } from "lodash-es";
+import { Icon } from "@iconify/vue";
 
 // 绘制类型选项
-const drawTypeOpts = shallowReactive([
+const drawTypeOpts = [
   {
     label: "矩形",
     value: "rect",
@@ -54,9 +70,10 @@ const drawTypeOpts = shallowReactive([
     label: "椭圆",
     value: "ellipse",
   },
-] as const);
-
+] as const;
+// 绘制类型
 type DrawType = (typeof drawTypeOpts)[number]["value"];
+// 选择框
 interface Box {
   type: DrawType; // 绘制类型
   startX: number; // 起始点 x 坐标
@@ -139,7 +156,7 @@ const handleBackward = () => {
 
 /**
  * 绘制矩形
- * @param drawParams
+ * @param drawParams 绘制参数
  */
 const drawRect = (drawParams: DrawParams) => {
   if (!ctx) return;
