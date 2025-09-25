@@ -54,18 +54,9 @@ import { Icon } from "@iconify/vue";
 
 // 绘制类型选项
 const drawTypeOpts = [
-  {
-    label: "矩形",
-    value: "rect",
-  },
-  {
-    label: "圆",
-    value: "circle",
-  },
-  {
-    label: "椭圆",
-    value: "ellipse",
-  },
+  { label: "矩形", value: "rect" },
+  { label: "圆", value: "circle" },
+  { label: "椭圆", value: "ellipse" },
 ] as const;
 // 绘制类型
 type DrawType = (typeof drawTypeOpts)[number]["value"];
@@ -77,13 +68,14 @@ interface Box {
   endX: number; // 结束点 x 坐标
   endY: number; // 结束点 y 坐标
   color: string; // 颜色
-  selected?: boolean; // 是否选中
 }
 type DrawParams = Omit<Box, "type">;
 // 所有绘制的选择框
-const boxes = ref<Box[]>([]);
+let boxes: Box[] = [];
 // 缓存绘制的选择框
-const cacheBoxes = ref<Box[]>([]);
+let cacheBoxes: Box[][] = [];
+// 当前缓存索引
+let stepIdx = -1;
 // canvas 元素
 const canvasRef = ref<HTMLCanvasElement>();
 // canvas 上下文
@@ -97,15 +89,15 @@ const drawType = ref<DrawType>("rect");
 // 是否正在绘制
 const isDrawShape = ref(false);
 // 绘制时的起始点
-const startPoint = ref<{ x: number; y: number } | null>(null);
+let startPoint: { x: number; y: number } | null = null;
 // 是否悬停在选择框上
-const isHoverShape = ref(false);
+let isHoverShape = false;
 // 悬停时选中的索引
-const selectedIdx = ref<number>(-1);
+let selectedIdx = -1;
 // 是否正在拖动选择框
-const isDraggingShape = ref(false);
+let isDraggingShape = false;
 // 拖动时的起始点
-const dragStartPoint = ref<{ x: number; y: number } | null>(null);
+let dragStartPoint: { x: number; y: number } | null = null;
 
 onMounted(() => {
   ctx = canvasRef.value?.getContext("2d") ?? null;
@@ -117,7 +109,7 @@ onMounted(() => {
 const handleDraw = () => {
   if (!ctx) return;
   isDrawShape.value = true;
-  isDraggingShape.value = isHoverShape.value = false;
+  isDraggingShape = isHoverShape = false;
   cursorVal.value = "crosshair";
 };
 
@@ -135,8 +127,8 @@ const handleCancelDraw = () => {
  */
 const handleClearAll = () => {
   if (!ctx) return;
-  boxes.value = [];
-  cacheBoxes.value = [];
+  boxes = [];
+  cacheBoxes = [];
   // ctx.reset(); // chrome 99 以上版本支持
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 };
@@ -145,11 +137,12 @@ const handleClearAll = () => {
  * 前进
  */
 const handleForward = () => {
-  if (boxes.value.length === 0) {
+  if (stepIdx < 0) {
     ElMessage.warning("没有可以前进的步骤！");
     return;
   }
-  boxes.value.pop();
+  boxes = cloneDeep(cacheBoxes[--stepIdx]) ?? [];
+  console.log(stepIdx, boxes);
   drawAllBoxes();
 };
 
@@ -157,19 +150,18 @@ const handleForward = () => {
  * 后退
  */
 const handleBackward = () => {
-  const len = boxes.value.length;
-  if (cacheBoxes.value.length === len) {
+  if (cacheBoxes.length <= stepIdx + 1) {
     ElMessage.warning("没有可以后退的步骤！");
     return;
   }
-  const box = cacheBoxes.value[len];
-  boxes.value.push(box);
+  boxes = cloneDeep(cacheBoxes[++stepIdx]);
   drawAllBoxes();
 };
 
 /**
  * 绘制矩形
  * @param drawParams 绘制参数
+ * @param isHoverShape 是否悬停在选择框上
  */
 const drawRect = (drawParams: DrawParams, isHoverShape?: boolean) => {
   if (!ctx) return;
@@ -192,6 +184,7 @@ const drawRect = (drawParams: DrawParams, isHoverShape?: boolean) => {
 /**
  * 绘制圆
  * @param drawParams 绘制参数
+ * @param isHoverShape 是否悬停在选择框上
  */
 const drawCircle = (drawParams: DrawParams, isHoverShape?: boolean) => {
   if (!ctx) return;
@@ -221,6 +214,7 @@ const drawCircle = (drawParams: DrawParams, isHoverShape?: boolean) => {
 /**
  * 绘制椭圆
  * @param drawParams 绘制参数
+ * @param isHoverShape 是否悬停在选择框上
  */
 const drawEllipse = (drawParams: DrawParams, isHoverShape?: boolean) => {
   if (!ctx) return;
@@ -248,6 +242,7 @@ const drawEllipse = (drawParams: DrawParams, isHoverShape?: boolean) => {
  * 绘制形状
  * @param drawType 绘制类型
  * @param drawParams 绘制参数
+ * @param isHoverShape 是否悬停在选择框上
  */
 const drawShape = (
   drawType: DrawType,
@@ -350,8 +345,8 @@ const isPointInShape = (x: number, y: number, shape: Box): boolean => {
  * @param y 点的y坐标
  */
 const findBoxIdxAtPoint = (x: number, y: number): number => {
-  for (let i = 0; i < boxes.value.length; i++) {
-    const box = boxes.value[i];
+  for (let i = 0; i < boxes.length; i++) {
+    const box = boxes[i];
     if (isPointInShape(x, y, box)) {
       return i;
     }
@@ -363,30 +358,30 @@ const findBoxIdxAtPoint = (x: number, y: number): number => {
  * 绘制所有选择框
  * @param boxList 选择框列表
  */
-const drawAllBoxes = (boxList: Box[] = boxes.value) => {
+const drawAllBoxes = (boxList: Box[] = boxes) => {
   if (!ctx) return;
   // ctx.reset() // chrome 99 以上版本支持
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   boxList.forEach((box, idx) => {
-    drawShape(box.type, box, idx === selectedIdx.value);
+    drawShape(box.type, box, idx === selectedIdx);
   });
 };
 
 /**
  * 鼠标按下事件
- * @param e
+ * @param e 鼠标事件
  */
 const handleMouseDown = (e: MouseEvent) => {
   if (!ctx) return;
   const { offsetX, offsetY } = e;
   if (isDrawShape.value) {
-    startPoint.value = { x: offsetX, y: offsetY };
+    startPoint = { x: offsetX, y: offsetY };
     return;
   }
-  if (isHoverShape.value) {
-    if (selectedIdx.value > -1) {
-      dragStartPoint.value = { x: offsetX, y: offsetY };
-      isDraggingShape.value = true;
+  if (isHoverShape) {
+    if (selectedIdx > -1) {
+      dragStartPoint = { x: offsetX, y: offsetY };
+      isDraggingShape = true;
       cursorVal.value = "move";
     }
   }
@@ -394,14 +389,14 @@ const handleMouseDown = (e: MouseEvent) => {
 
 /**
  * 鼠标移动事件
- * @param e
+ * @param e 鼠标事件
  */
 const handleMouseMove = (e: MouseEvent) => {
   if (!ctx) return;
   const { offsetX, offsetY } = e;
   if (isDrawShape.value) {
-    if (startPoint.value) {
-      const { x: startX, y: startY } = startPoint.value;
+    if (startPoint) {
+      const { x: startX, y: startY } = startPoint;
       drawAllBoxes();
       drawShape(drawType.value, {
         startX,
@@ -411,33 +406,33 @@ const handleMouseMove = (e: MouseEvent) => {
         color: selectedColor.value,
       });
     }
-  } else if (isDraggingShape.value) {
-    if (dragStartPoint.value) {
-      const { x: dragStartX, y: dragStartY } = dragStartPoint.value;
-      boxes.value[selectedIdx.value].startX += offsetX - dragStartX;
-      boxes.value[selectedIdx.value].startY += offsetY - dragStartY;
-      boxes.value[selectedIdx.value].endX += offsetX - dragStartX;
-      boxes.value[selectedIdx.value].endY += offsetY - dragStartY;
+  } else if (isDraggingShape) {
+    if (dragStartPoint) {
+      const { x: dragStartX, y: dragStartY } = dragStartPoint;
+      boxes[selectedIdx].startX += offsetX - dragStartX;
+      boxes[selectedIdx].startY += offsetY - dragStartY;
+      boxes[selectedIdx].endX += offsetX - dragStartX;
+      boxes[selectedIdx].endY += offsetY - dragStartY;
       drawAllBoxes();
-      dragStartPoint.value = { x: offsetX, y: offsetY };
+      dragStartPoint = { x: offsetX, y: offsetY };
     }
   } else {
-    selectedIdx.value = findBoxIdxAtPoint(offsetX, offsetY);
-    isHoverShape.value = selectedIdx.value > -1;
+    selectedIdx = findBoxIdxAtPoint(offsetX, offsetY);
+    isHoverShape = selectedIdx > -1;
     drawAllBoxes();
   }
 };
 
 /**
  * 鼠标松开事件
- * @param e
+ * @param e 鼠标事件
  */
 const handleMouseUp = (e: MouseEvent) => {
   if (!ctx) return;
   if (isDrawShape.value) {
     const { offsetX, offsetY } = e;
-    const { x: startX, y: startY } = startPoint.value ?? { x: 0, y: 0 };
-    boxes.value.push({
+    const { x: startX, y: startY } = startPoint ?? { x: 0, y: 0 };
+    boxes.push({
       type: drawType.value,
       startX,
       startY,
@@ -445,15 +440,18 @@ const handleMouseUp = (e: MouseEvent) => {
       endY: offsetY,
       color: selectedColor.value,
     });
-    cacheBoxes.value = cloneDeep(boxes.value);
-  } else if (isDraggingShape.value) {
-    // dragStartPoint.value = null;
-    // isDraggingShape.value = false;
-    // cursorVal.value = "default";
+    cacheBoxes = cacheBoxes.slice(0, ++stepIdx);
+    cacheBoxes.push(cloneDeep(boxes));
+  } else if (isDraggingShape) {
+    const draggingShape = boxes[selectedIdx]
+    boxes.splice(selectedIdx, 1)
+    boxes.push(draggingShape)
+    cacheBoxes.push(cloneDeep(boxes));
+    stepIdx = cacheBoxes.length - 1
   }
-  startPoint.value = null;
-  dragStartPoint.value = null;
-  isDraggingShape.value = false;
+  startPoint = null;
+  dragStartPoint = null;
+  isDraggingShape = false;
   cursorVal.value = "default";
 };
 </script>

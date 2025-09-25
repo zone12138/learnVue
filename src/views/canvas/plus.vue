@@ -533,7 +533,7 @@ const handleMouseLeave = () => {
 };
 </script>
 
-<style>
+<style scoped>
 .box-select {
   width: 100%;
   height: 100%;
