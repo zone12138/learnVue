@@ -10,17 +10,13 @@
           :value="item.value"
         />
       </ElSelect>
-      <ElButton
-        type="primary"
-        :disabled="cursorVal !== 'default'"
-        @click="handleDraw"
-      >
+      <ElButton type="primary" :disabled="isDrawShape" @click="handleDraw">
         <Icon icon="fluent:pen-28-regular" />
         开始绘制
       </ElButton>
       <ElButton
         type="warning"
-        :disabled="cursorVal === 'default'"
+        :disabled="!isDrawShape"
         @click="handleCancelDraw"
       >
         <Icon icon="fluent:pen-prohibited-28-regular" />
@@ -81,6 +77,7 @@ interface Box {
   endX: number; // 结束点 x 坐标
   endY: number; // 结束点 y 坐标
   color: string; // 颜色
+  selected?: boolean; // 是否选中
 }
 type DrawParams = Omit<Box, "type">;
 // 所有绘制的选择框
@@ -97,6 +94,19 @@ const cursorVal = ref("default");
 const selectedColor = ref("#ff0000");
 // 绘制类型
 const drawType = ref<DrawType>("rect");
+// 是否正在绘制
+const isDrawShape = ref(false);
+// 绘制时的起始点
+const startPoint = ref<{ x: number; y: number } | null>(null);
+// 是否悬停在选择框上
+const isHoverShape = ref(false);
+// 悬停时选中的索引
+const selectedIdx = ref<number>(-1);
+// 是否正在拖动选择框
+const isDraggingShape = ref(false);
+// 拖动时的起始点
+const dragStartPoint = ref<{ x: number; y: number } | null>(null);
+
 onMounted(() => {
   ctx = canvasRef.value?.getContext("2d") ?? null;
 });
@@ -106,6 +116,8 @@ onMounted(() => {
  */
 const handleDraw = () => {
   if (!ctx) return;
+  isDrawShape.value = true;
+  isDraggingShape.value = isHoverShape.value = false;
   cursorVal.value = "crosshair";
 };
 
@@ -114,6 +126,7 @@ const handleDraw = () => {
  */
 const handleCancelDraw = () => {
   if (!ctx) return;
+  isDrawShape.value = false;
   cursorVal.value = "default";
 };
 
@@ -158,10 +171,15 @@ const handleBackward = () => {
  * 绘制矩形
  * @param drawParams 绘制参数
  */
-const drawRect = (drawParams: DrawParams) => {
+const drawRect = (drawParams: DrawParams, isHoverShape?: boolean) => {
   if (!ctx) return;
   ctx.beginPath();
   ctx.strokeStyle = drawParams.color;
+  if (isHoverShape) {
+    ctx.setLineDash([5, 5]);
+  } else {
+    ctx.setLineDash([]);
+  }
   ctx.strokeRect(
     drawParams.startX,
     drawParams.startY,
@@ -175,7 +193,7 @@ const drawRect = (drawParams: DrawParams) => {
  * 绘制圆
  * @param drawParams 绘制参数
  */
-const drawCircle = (drawParams: DrawParams) => {
+const drawCircle = (drawParams: DrawParams, isHoverShape?: boolean) => {
   if (!ctx) return;
   const radius =
     Math.sqrt(
@@ -184,6 +202,11 @@ const drawCircle = (drawParams: DrawParams) => {
     ) / 2;
   ctx.beginPath();
   ctx.strokeStyle = drawParams.color;
+  if (isHoverShape) {
+    ctx.setLineDash([5, 5]);
+  } else {
+    ctx.setLineDash([]);
+  }
   ctx.arc(
     drawParams.startX + (drawParams.endX - drawParams.startX) / 2,
     drawParams.startY + (drawParams.endY - drawParams.startY) / 2,
@@ -199,10 +222,15 @@ const drawCircle = (drawParams: DrawParams) => {
  * 绘制椭圆
  * @param drawParams 绘制参数
  */
-const drawEllipse = (drawParams: DrawParams) => {
+const drawEllipse = (drawParams: DrawParams, isHoverShape?: boolean) => {
   if (!ctx) return;
   ctx.beginPath();
   ctx.strokeStyle = drawParams.color;
+  if (isHoverShape) {
+    ctx.setLineDash([5, 5]);
+  } else {
+    ctx.setLineDash([]);
+  }
   ctx.ellipse(
     drawParams.startX + (drawParams.endX - drawParams.startX) / 2,
     drawParams.startY + (drawParams.endY - drawParams.startY) / 2,
@@ -221,17 +249,21 @@ const drawEllipse = (drawParams: DrawParams) => {
  * @param drawType 绘制类型
  * @param drawParams 绘制参数
  */
-const drawShape = (drawType: DrawType, drawParams: DrawParams) => {
+const drawShape = (
+  drawType: DrawType,
+  drawParams: DrawParams,
+  isHoverShape?: boolean
+) => {
   if (!ctx) return;
   switch (drawType) {
     case "rect":
-      drawRect(drawParams);
+      drawRect(drawParams, isHoverShape);
       break;
     case "circle":
-      drawCircle(drawParams);
+      drawCircle(drawParams, isHoverShape);
       break;
     case "ellipse":
-      drawEllipse(drawParams);
+      drawEllipse(drawParams, isHoverShape);
       break;
     default:
       break;
@@ -239,21 +271,106 @@ const drawShape = (drawType: DrawType, drawParams: DrawParams) => {
 };
 
 /**
- * 绘制所有选择框
+ * 检查点是否在矩形内
+ * @param x 点的x坐标
+ * @param y 点的y坐标
+ * @param rect 矩形
  */
-const drawAllBoxes = () => {
+const isPointInRect = (x: number, y: number, rect: Box): boolean => {
+  const minX = Math.min(rect.startX, rect.endX);
+  const minY = Math.min(rect.startY, rect.endY);
+  const maxX = Math.max(rect.startX, rect.endX);
+  const maxY = Math.max(rect.startY, rect.endY);
+  return x >= minX && x <= maxX && y >= minY && y <= maxY;
+};
+
+/**
+ * 检查点是否在圆内
+ * @param x 点的x坐标
+ * @param y 点的y坐标
+ * @param circle 圆
+ */
+const isPointInCircle = (x: number, y: number, circle: Box): boolean => {
+  const centerX = (circle.startX + circle.endX) / 2;
+  const centerY = (circle.startY + circle.endY) / 2;
+  const radius =
+    Math.sqrt(
+      Math.pow(circle.endX - circle.startX, 2) +
+        Math.pow(circle.endY - circle.startY, 2)
+    ) / 2;
+
+  const distance = Math.sqrt(
+    Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2)
+  );
+  return distance <= radius;
+};
+
+/**
+ * 检查点是否在椭圆内
+ * @param x 点的x坐标
+ * @param y 点的y坐标
+ * @param ellipse 椭圆
+ */
+const isPointInEllipse = (x: number, y: number, ellipse: Box): boolean => {
+  const centerX = ellipse.startX + (ellipse.endX - ellipse.startX) / 2;
+  const centerY = ellipse.startY + (ellipse.endY - ellipse.startY) / 2;
+  const radiusX = Math.abs(ellipse.endX - ellipse.startX) / 2;
+  const radiusY = Math.abs(ellipse.endY - ellipse.startY) / 2;
+
+  if (radiusX === 0 || radiusY === 0) return false;
+
+  const normalizedX = (x - centerX) / radiusX;
+  const normalizedY = (y - centerY) / radiusY;
+
+  return normalizedX * normalizedX + normalizedY * normalizedY <= 1;
+};
+
+/**
+ * 检查点是否在形状内
+ * @param x 点的x坐标
+ * @param y 点的y坐标
+ * @param shape 形状
+ */
+const isPointInShape = (x: number, y: number, shape: Box): boolean => {
+  switch (shape.type) {
+    case "rect":
+      return isPointInRect(x, y, shape);
+    case "circle":
+      return isPointInCircle(x, y, shape);
+    case "ellipse":
+      return isPointInEllipse(x, y, shape);
+    default:
+      return false;
+  }
+};
+
+/**
+ * 查找指定点所在的选择框索引
+ * @param x 点的x坐标
+ * @param y 点的y坐标
+ */
+const findBoxIdxAtPoint = (x: number, y: number): number => {
+  for (let i = 0; i < boxes.value.length; i++) {
+    const box = boxes.value[i];
+    if (isPointInShape(x, y, box)) {
+      return i;
+    }
+  }
+  return -1;
+};
+
+/**
+ * 绘制所有选择框
+ * @param boxList 选择框列表
+ */
+const drawAllBoxes = (boxList: Box[] = boxes.value) => {
   if (!ctx) return;
   // ctx.reset() // chrome 99 以上版本支持
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-  boxes.value.forEach((box) => {
-    drawShape(box.type, box);
+  boxList.forEach((box, idx) => {
+    drawShape(box.type, box, idx === selectedIdx.value);
   });
 };
-
-// 是否正在绘制
-const mouseIsDown = ref(false);
-// 起始点
-const startPoint = ref<{ x: number; y: number } | null>(null);
 
 /**
  * 鼠标按下事件
@@ -261,10 +378,18 @@ const startPoint = ref<{ x: number; y: number } | null>(null);
  */
 const handleMouseDown = (e: MouseEvent) => {
   if (!ctx) return;
-  if (cursorVal.value !== "crosshair") return;
-  mouseIsDown.value = true;
   const { offsetX, offsetY } = e;
-  startPoint.value = { x: offsetX, y: offsetY };
+  if (isDrawShape.value) {
+    startPoint.value = { x: offsetX, y: offsetY };
+    return;
+  }
+  if (isHoverShape.value) {
+    if (selectedIdx.value > -1) {
+      dragStartPoint.value = { x: offsetX, y: offsetY };
+      isDraggingShape.value = true;
+      cursorVal.value = "move";
+    }
+  }
 };
 
 /**
@@ -273,18 +398,34 @@ const handleMouseDown = (e: MouseEvent) => {
  */
 const handleMouseMove = (e: MouseEvent) => {
   if (!ctx) return;
-  if (!mouseIsDown.value) return;
-  if (!startPoint.value) return;
   const { offsetX, offsetY } = e;
-  const { x: startX, y: startY } = startPoint.value;
-  drawAllBoxes();
-  drawShape(drawType.value, {
-    startX,
-    startY,
-    endX: offsetX,
-    endY: offsetY,
-    color: selectedColor.value,
-  });
+  if (isDrawShape.value) {
+    if (startPoint.value) {
+      const { x: startX, y: startY } = startPoint.value;
+      drawAllBoxes();
+      drawShape(drawType.value, {
+        startX,
+        startY,
+        endX: offsetX,
+        endY: offsetY,
+        color: selectedColor.value,
+      });
+    }
+  } else if (isDraggingShape.value) {
+    if (dragStartPoint.value) {
+      const { x: dragStartX, y: dragStartY } = dragStartPoint.value;
+      boxes.value[selectedIdx.value].startX += offsetX - dragStartX;
+      boxes.value[selectedIdx.value].startY += offsetY - dragStartY;
+      boxes.value[selectedIdx.value].endX += offsetX - dragStartX;
+      boxes.value[selectedIdx.value].endY += offsetY - dragStartY;
+      drawAllBoxes();
+      dragStartPoint.value = { x: offsetX, y: offsetY };
+    }
+  } else {
+    selectedIdx.value = findBoxIdxAtPoint(offsetX, offsetY);
+    isHoverShape.value = selectedIdx.value > -1;
+    drawAllBoxes();
+  }
 };
 
 /**
@@ -293,24 +434,31 @@ const handleMouseMove = (e: MouseEvent) => {
  */
 const handleMouseUp = (e: MouseEvent) => {
   if (!ctx) return;
-  if (cursorVal.value !== "crosshair") return;
-  const { offsetX, offsetY } = e;
-  const { x: startX, y: startY } = startPoint.value ?? { x: 0, y: 0 };
-  boxes.value.push({
-    type: drawType.value,
-    startX,
-    startY,
-    endX: offsetX,
-    endY: offsetY,
-    color: selectedColor.value,
-  });
-  cacheBoxes.value = cloneDeep(boxes.value);
-  mouseIsDown.value = false;
+  if (isDrawShape.value) {
+    const { offsetX, offsetY } = e;
+    const { x: startX, y: startY } = startPoint.value ?? { x: 0, y: 0 };
+    boxes.value.push({
+      type: drawType.value,
+      startX,
+      startY,
+      endX: offsetX,
+      endY: offsetY,
+      color: selectedColor.value,
+    });
+    cacheBoxes.value = cloneDeep(boxes.value);
+  } else if (isDraggingShape.value) {
+    // dragStartPoint.value = null;
+    // isDraggingShape.value = false;
+    // cursorVal.value = "default";
+  }
   startPoint.value = null;
+  dragStartPoint.value = null;
+  isDraggingShape.value = false;
+  cursorVal.value = "default";
 };
 </script>
 
-<style>
+<style scoped>
 .box-select {
   width: 100%;
   height: 100%;
