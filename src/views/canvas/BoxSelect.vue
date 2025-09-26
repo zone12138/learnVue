@@ -4,10 +4,10 @@
       <ElColorPicker v-model="selectedColor" />
       <ElSelect v-model="drawType" placeholder="选择类型">
         <ElOption
-          v-for="item in drawTypeOpts"
-          :key="item.value"
-          :label="item.label"
-          :value="item.value"
+          v-for="{ label, value } in drawTypeOpts"
+          :key="value"
+          :label="label"
+          :value="value"
         />
       </ElSelect>
       <ElButton type="primary" :disabled="isDrawShape" @click="handleDraw">
@@ -33,24 +33,37 @@
         <el-icon><DArrowRight /></el-icon>
       </ElButton>
     </div>
-    <canvas
-      width="1200"
-      height="600"
-      ref="canvasRef"
-      @mousedown="handleMouseDown"
-      @mousemove="handleMouseMove"
-      @mouseup="handleMouseUp"
-    ></canvas>
+    <div ref="containerRef" class="canvas-container">
+      <canvas
+        ref="canvasRef"
+        :width="canvasWidth"
+        :height="canvasHeight"
+      ></canvas>
+      <!-- 增加一层防止右键复制canvas -->
+      <canvas
+        class="upper-canvas"
+        :width="canvasWidth"
+        :height="canvasHeight"
+        @mousedown="handleMouseDown"
+        @mousemove="handleMouseMove"
+        @mouseup="handleMouseUp"
+      ></canvas>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, onUnmounted, ref } from "vue";
 
 import { DArrowLeft, DArrowRight } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
 import { cloneDeep } from "lodash-es";
 import { Icon } from "@iconify/vue";
+
+// 画布高度
+const canvasHeight = ref(600);
+// 画布宽度
+const canvasWidth = ref(1200);
 
 // 绘制类型选项
 const drawTypeOpts = [
@@ -60,7 +73,7 @@ const drawTypeOpts = [
 ] as const;
 // 绘制类型
 type DrawType = (typeof drawTypeOpts)[number]["value"];
-// 选择框
+// 图型参数
 interface Box {
   type: DrawType; // 绘制类型
   startX: number; // 起始点 x 坐标
@@ -69,12 +82,13 @@ interface Box {
   endY: number; // 结束点 y 坐标
   color: string; // 颜色
 }
+// 绘制参数
 type DrawParams = Omit<Box, "type">;
-// 所有绘制的选择框
+// 当前绘制的所有图型
 let boxes: Box[] = [];
-// 缓存绘制的选择框
+// 缓存所有步骤中绘制的图型
 let cacheBoxes: Box[][] = [];
-// 当前缓存索引
+// 当前绘制步骤索引
 let stepIdx = -1;
 // canvas 元素
 const canvasRef = ref<HTMLCanvasElement>();
@@ -89,19 +103,45 @@ const drawType = ref<DrawType>("rect");
 // 是否正在绘制
 const isDrawShape = ref(false);
 // 绘制时的起始点
-let startPoint: { x: number; y: number } | null = null;
-// 是否悬停在选择框上
+let drawStartPoint: { x: number; y: number } | null = null;
+// 是否悬停在上图型上
 let isHoverShape = false;
 // 悬停时选中的索引
 let selectedIdx = -1;
-// 是否正在拖动选择框
+// 是否正在拖动图型
 let isDraggingShape = false;
 // 拖动时的起始点
 let dragStartPoint: { x: number; y: number } | null = null;
 
+const containerRef = ref<HTMLDivElement>();
+let pixelRatio = 1, observer: ResizeObserver | null = null;
+
+/**
+ * 监听容器大小变化，调整 canvas 大小
+ */
+const resizeCanvas = () => {
+  console.log("resizeCanvas");
+  if (!containerRef.value || !ctx) return;
+  const newPixelRatio = window.devicePixelRatio || 1;
+  if (newPixelRatio === pixelRatio) return;
+  pixelRatio = 1 / newPixelRatio;
+  canvasHeight.value *= pixelRatio;
+  canvasWidth.value *= pixelRatio;
+  ctx.scale(pixelRatio, pixelRatio);
+  drawAllBoxes();
+};
+
+
 onMounted(() => {
   ctx = canvasRef.value?.getContext("2d") ?? null;
+  // if (!containerRef.value) return;
+  // observer = new ResizeObserver(resizeCanvas);
+  // observer.observe(containerRef.value);
 });
+
+// onUnmounted(() => {
+//   observer?.disconnect();
+// });
 
 /**
  * 开始绘制
@@ -123,14 +163,21 @@ const handleCancelDraw = () => {
 };
 
 /**
- * 清除所有选择框
+ * 清除画布
  */
-const handleClearAll = () => {
+const clearCanvas = () => {
   if (!ctx) return;
-  boxes = [];
-  cacheBoxes = [];
   // ctx.reset(); // chrome 99 以上版本支持
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+};
+
+/**
+ * 清除所有图型
+ */
+const handleClearAll = () => {
+  clearCanvas();
+  boxes = [];
+  cacheBoxes = [];
 };
 
 /**
@@ -142,7 +189,6 @@ const handleForward = () => {
     return;
   }
   boxes = cloneDeep(cacheBoxes[--stepIdx]) ?? [];
-  console.log(stepIdx, boxes);
   drawAllBoxes();
 };
 
@@ -161,17 +207,13 @@ const handleBackward = () => {
 /**
  * 绘制矩形
  * @param drawParams 绘制参数
- * @param isHoverShape 是否悬停在选择框上
+ * @param isHoverShape 是否悬停在图型上
  */
 const drawRect = (drawParams: DrawParams, isHoverShape?: boolean) => {
   if (!ctx) return;
   ctx.beginPath();
   ctx.strokeStyle = drawParams.color;
-  if (isHoverShape) {
-    ctx.setLineDash([5, 5]);
-  } else {
-    ctx.setLineDash([]);
-  }
+  ctx.setLineDash(isHoverShape ? [5, 5] : []);
   ctx.strokeRect(
     drawParams.startX,
     drawParams.startY,
@@ -184,7 +226,7 @@ const drawRect = (drawParams: DrawParams, isHoverShape?: boolean) => {
 /**
  * 绘制圆
  * @param drawParams 绘制参数
- * @param isHoverShape 是否悬停在选择框上
+ * @param isHoverShape 是否悬停在图型上
  */
 const drawCircle = (drawParams: DrawParams, isHoverShape?: boolean) => {
   if (!ctx) return;
@@ -195,11 +237,7 @@ const drawCircle = (drawParams: DrawParams, isHoverShape?: boolean) => {
     ) / 2;
   ctx.beginPath();
   ctx.strokeStyle = drawParams.color;
-  if (isHoverShape) {
-    ctx.setLineDash([5, 5]);
-  } else {
-    ctx.setLineDash([]);
-  }
+  ctx.setLineDash(isHoverShape ? [5, 5] : []);
   ctx.arc(
     drawParams.startX + (drawParams.endX - drawParams.startX) / 2,
     drawParams.startY + (drawParams.endY - drawParams.startY) / 2,
@@ -214,17 +252,13 @@ const drawCircle = (drawParams: DrawParams, isHoverShape?: boolean) => {
 /**
  * 绘制椭圆
  * @param drawParams 绘制参数
- * @param isHoverShape 是否悬停在选择框上
+ * @param isHoverShape 是否悬停在图型上
  */
 const drawEllipse = (drawParams: DrawParams, isHoverShape?: boolean) => {
   if (!ctx) return;
   ctx.beginPath();
   ctx.strokeStyle = drawParams.color;
-  if (isHoverShape) {
-    ctx.setLineDash([5, 5]);
-  } else {
-    ctx.setLineDash([]);
-  }
+  ctx.setLineDash(isHoverShape ? [5, 5] : []);
   ctx.ellipse(
     drawParams.startX + (drawParams.endX - drawParams.startX) / 2,
     drawParams.startY + (drawParams.endY - drawParams.startY) / 2,
@@ -242,7 +276,7 @@ const drawEllipse = (drawParams: DrawParams, isHoverShape?: boolean) => {
  * 绘制形状
  * @param drawType 绘制类型
  * @param drawParams 绘制参数
- * @param isHoverShape 是否悬停在选择框上
+ * @param isHoverShape 是否悬停在图型上
  */
 const drawShape = (
   drawType: DrawType,
@@ -340,7 +374,7 @@ const isPointInShape = (x: number, y: number, shape: Box): boolean => {
 };
 
 /**
- * 查找指定点所在的选择框索引
+ * 查找指定点所在的图型索引
  * @param x 点的x坐标
  * @param y 点的y坐标
  */
@@ -355,13 +389,11 @@ const findBoxIdxAtPoint = (x: number, y: number): number => {
 };
 
 /**
- * 绘制所有选择框
- * @param boxList 选择框列表
+ * 绘制所有图型
+ * @param boxList 图型列表
  */
 const drawAllBoxes = (boxList: Box[] = boxes) => {
-  if (!ctx) return;
-  // ctx.reset() // chrome 99 以上版本支持
-  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  clearCanvas();
   boxList.forEach((box, idx) => {
     drawShape(box.type, box, idx === selectedIdx);
   });
@@ -375,7 +407,7 @@ const handleMouseDown = (e: MouseEvent) => {
   if (!ctx) return;
   const { offsetX, offsetY } = e;
   if (isDrawShape.value) {
-    startPoint = { x: offsetX, y: offsetY };
+    drawStartPoint = { x: offsetX, y: offsetY };
     return;
   }
   if (isHoverShape) {
@@ -395,8 +427,8 @@ const handleMouseMove = (e: MouseEvent) => {
   if (!ctx) return;
   const { offsetX, offsetY } = e;
   if (isDrawShape.value) {
-    if (startPoint) {
-      const { x: startX, y: startY } = startPoint;
+    if (drawStartPoint) {
+      const { x: startX, y: startY } = drawStartPoint;
       drawAllBoxes();
       drawShape(drawType.value, {
         startX,
@@ -431,7 +463,7 @@ const handleMouseUp = (e: MouseEvent) => {
   if (!ctx) return;
   if (isDrawShape.value) {
     const { offsetX, offsetY } = e;
-    const { x: startX, y: startY } = startPoint ?? { x: 0, y: 0 };
+    const { x: startX, y: startY } = drawStartPoint ?? { x: 0, y: 0 };
     boxes.push({
       type: drawType.value,
       startX,
@@ -443,16 +475,16 @@ const handleMouseUp = (e: MouseEvent) => {
     cacheBoxes = cacheBoxes.slice(0, ++stepIdx);
     cacheBoxes.push(cloneDeep(boxes));
   } else if (isDraggingShape) {
-    const draggingShape = boxes[selectedIdx]
-    boxes.splice(selectedIdx, 1)
-    boxes.push(draggingShape)
+    const draggingShape = boxes[selectedIdx];
+    boxes.splice(selectedIdx, 1);
+    boxes.push(draggingShape);
     cacheBoxes.push(cloneDeep(boxes));
-    stepIdx = cacheBoxes.length - 1
+    stepIdx = cacheBoxes.length - 1;
+    cursorVal.value = "default";
   }
-  startPoint = null;
+  drawStartPoint = null;
   dragStartPoint = null;
   isDraggingShape = false;
-  cursorVal.value = "default";
 };
 </script>
 
@@ -475,9 +507,22 @@ const handleMouseUp = (e: MouseEvent) => {
     }
   }
 
-  canvas {
-    background-color: black;
-    cursor: v-bind(cursorVal);
+  .canvas-container {
+    position: relative;
+    canvas {
+      position: relative;
+      height: v-bind(canvasHeight + 'px');
+      width: v-bind(canvasWidth + 'px');
+      background-color: #000;
+      cursor: v-bind(cursorVal);
+
+      &.upper-canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        background-color: transparent;
+      }
+    }
   }
 }
 </style>

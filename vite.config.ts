@@ -8,6 +8,9 @@ import Components from "unplugin-vue-components/vite";
 import { ElementPlusResolver } from "unplugin-vue-components/resolvers";
 import Icons from "unplugin-icons/vite";
 import IconsResolver from "unplugin-icons/resolver";
+import { visualizer } from "rollup-plugin-visualizer";
+
+const isReport = process.env.isReport === "true";
 
 export default defineConfig(({ mode }) => {
   const isProd = mode === "production";
@@ -34,27 +37,13 @@ export default defineConfig(({ mode }) => {
       Icons({
         autoInstall: true,
       }),
-      isProd &&
-        cdnImport({
-          modules: [
-            {
-              name: "vue",
-              var: "Vue",
-              path: "https://unpkg.com/vue@3/dist/vue.global.js",
-            },
-            {
-              name: "vue-router",
-              var: "VueRouter",
-              path: "https://unpkg.com/vue-router@4/dist/vue-router.global.js",
-            },
-            {
-              name: "element-plus",
-              var: "ElementPlus",
-              path: "https://unpkg.com/element-plus@2.10.4/dist/index.full.js",
-            },
-          ],
+      isReport &&
+        visualizer({
+          open: true,
+          gzipSize: true,
+          brotliSize: true,
         }),
-    ].filter(Boolean),
+    ],
     resolve: {
       alias: {
         "@": resolve(__dirname, "src"),
@@ -67,7 +56,7 @@ export default defineConfig(({ mode }) => {
     },
     optimizeDeps: {
       // add this line for fixed the warning: (!) Could not auto-determine entry point from rollupOptions or html files and there are no explicit optimize Deps.include patterns. Skipping dependency pre-bundling.
-      entries: [], 
+      entries: [],
       esbuildOptions: {
         target: "es2020",
       },
