@@ -9,6 +9,7 @@ import { ElementPlusResolver } from "unplugin-vue-components/resolvers";
 import Icons from "unplugin-icons/vite";
 import IconsResolver from "unplugin-icons/resolver";
 import { visualizer } from "rollup-plugin-visualizer";
+import inspect from "vite-plugin-inspect";
 
 const isReport = process.env.isReport === "true";
 
@@ -43,7 +44,8 @@ export default defineConfig(({ mode }) => {
           gzipSize: true,
           brotliSize: true,
         }),
-    ],
+      inspect(),
+    ].filter(Boolean),
     resolve: {
       alias: {
         "@": resolve(__dirname, "src"),

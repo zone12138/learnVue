@@ -124,24 +124,24 @@ const resizeCanvas = () => {
   if (!containerRef.value || !ctx) return;
   const newPixelRatio = window.devicePixelRatio || 1;
   if (newPixelRatio === pixelRatio) return;
-  pixelRatio = 1 / newPixelRatio;
-  canvasHeight.value *= pixelRatio;
-  canvasWidth.value *= pixelRatio;
+  canvasHeight.value = canvasHeight.value / pixelRatio * newPixelRatio;
+  canvasWidth.value = canvasWidth.value / pixelRatio * newPixelRatio;
   ctx.scale(pixelRatio, pixelRatio);
-  drawAllBoxes();
+  pixelRatio = newPixelRatio;
+  setTimeout(() => drawAllBoxes(), 0);
 };
 
 
 onMounted(() => {
   ctx = canvasRef.value?.getContext("2d") ?? null;
-  // if (!containerRef.value) return;
-  // observer = new ResizeObserver(resizeCanvas);
-  // observer.observe(containerRef.value);
+  if (!containerRef.value) return;
+  observer = new ResizeObserver(resizeCanvas);
+  observer.observe(containerRef.value);
 });
 
-// onUnmounted(() => {
-//   observer?.disconnect();
-// });
+onUnmounted(() => {
+  observer?.disconnect();
+});
 
 /**
  * 开始绘制
