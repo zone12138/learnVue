@@ -10,6 +10,7 @@ declare module 'vue' {
   export interface GlobalComponents {
     BlockOne: typeof import('./src/components/asyncComponents/block-one.vue')['default']
     DatePicker: typeof import('./src/components/datePicker/index.vue')['default']
+    ElAside: typeof import('element-plus/es')['ElAside']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElColorPicker: typeof import('element-plus/es')['ElColorPicker']
     ElIcon: typeof import('element-plus/es')['ElIcon']

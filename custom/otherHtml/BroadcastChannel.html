@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <button id="openBtn">打开新窗口</button>
+    <button id="sendBtn">发送消息</button>
+    <h1 id="time"></h1>
+    <script>
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const time = urlParams.get('time');
+        if (time) {
+            document.getElementById('time').innerHTML = time;
+        }
+
+        function getTime() {
+            return (new Date()).toLocaleString();
+        }
+
+        const broadcastChannel = new BroadcastChannel('my-channel');
+        document.getElementById('openBtn').addEventListener('click', () => {
+            window.open('BroadcastChannel.html?time=' + getTime(), 'myWindow');
+        })
+        document.getElementById('sendBtn').addEventListener('click', () => {
+            broadcastChannel.postMessage(getTime());
+        })
+        broadcastChannel.onmessage = (event) => {
+            document.getElementById('time').innerHTML = event.data;
+        }
+        
+    </script>
+</body>
+
+</html>

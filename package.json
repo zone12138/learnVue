@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host",
+    "nvm": "nvm use 18 && pnpm dev",
     "report": "cross-env isReport=true vite build",
     "build": "vite build",
     "lint": "eslint --ext .ts,.tsx,.vue src"

@@ -486,6 +486,10 @@ const handleMouseUp = (e: MouseEvent) => {
   dragStartPoint = null;
   isDraggingShape = false;
 };
+
+defineExpose({
+  drawAllBoxes,
+});
 </script>
 
 <style scoped>
