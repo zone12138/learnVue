@@ -20,6 +20,7 @@ declare module 'vue' {
     ElTableColumn: typeof import('element-plus/es')['ElTableColumn']
     ErrorComp: typeof import('./src/components/asyncComponents/errorComp.vue')['default']
     HelloWorld: typeof import('./src/components/HelloWorld.vue')['default']
+    LoadingBtn: typeof import('./src/components/Repackage/loadingBtn.vue')['default']
     LoadingComp: typeof import('./src/components/asyncComponents/loadingComp.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
